@@ -1,6 +1,6 @@
 [project]
 name = "sphinx-typst-render"
-version = "0.2.0"
+version = "0.2.2"
 description = "Render Typst sources into downloadable PDFs and inline previews in Sphinx and Jupyter Book."
 readme = "README.md"
 requires-python = ">=3.10"
