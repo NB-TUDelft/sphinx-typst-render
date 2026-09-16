@@ -1,0 +1,60 @@
+[project]
+name = "sphinx-typst-render"
+version = "0.1.0"
+description = "Render Typst sources into downloadable PDFs and inline previews in Sphinx and Jupyter Book."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "NB-TUDelft" },
+    { name = "K.Zabłocki (Zamkorus)" },
+]
+keywords = ["jupyter-book", "sphinx", "typst", "pdf", "forms", "documentation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Sphinx",
+    "Framework :: Sphinx :: Extension",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Documentation :: Sphinx",
+    "Topic :: Software Development :: Documentation",
+]
+dependencies = [
+    "sphinx>=7",
+    "typst>=0.15",
+    "typst-fillable>=0.0.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/NB-TUDelft/sphinx-typst-render"
+Repository = "https://github.com/NB-TUDelft/sphinx-typst-render"
+Issues = "https://github.com/NB-TUDelft/sphinx-typst-render/issues"
+Changelog = "https://github.com/NB-TUDelft/sphinx-typst-render/releases"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "twine>=6.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+
+[project.scripts]
+sphinx-typst-render = "sphinx_typst_render:main"
+
+[build-system]
+requires = ["uv_build>=0.12.14,<0.13.0"]
+build-backend = "uv_build"
