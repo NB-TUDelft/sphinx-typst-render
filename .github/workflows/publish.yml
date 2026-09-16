@@ -12,11 +12,9 @@
 # publish.yml breaks publishing with a 403 until the publisher config is
 # updated to match.
 #
-# Conda is switched off. This package depends on typst (the Python binding) and
-# typst-fillable, and neither is on conda-forge. conda-forge's `typst` is the
-# Rust CLI, a different program that happens to share the name, so declaring it
-# would produce a conda package that installs and then fails on `import typst`.
-# See RELEASING.md for what has to change to turn conda on.
+# Conda note: the PyPI project `typst` is called `typst-py` on conda-forge,
+# because conda-forge's `typst` is the unrelated Rust CLI. The mapping lives in
+# [tool.conda-recipe].name-map in pyproject.toml.
 
 name: Publish
 
@@ -56,7 +54,6 @@ jobs:
           version_module: src/sphinx_typst_render/__init__.py
           tag: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
           pypi_publish_url: ${{ (github.event_name == 'workflow_dispatch' && inputs.test_pypi) && 'https://test.pypi.org/legacy/' || '' }}
-          # Set to NB_TUDelft to enable conda, once the dependencies resolve.
-          anaconda_owner: ""
+          anaconda_owner: NB_TUDelft
           anaconda_api_key: ${{ secrets.ANACONDA_API_KEY }}
           dry_run: ${{ github.event_name == 'pull_request' }}
