@@ -29,16 +29,18 @@ def _store(env) -> dict[str, list[dict]]:
     return getattr(env, ENV_KEY)
 
 
-def register(env, docname: str, *, digest: str, pdf: Path, label: str) -> str:
+def register(
+    env, docname: str, *, digest: str, path: Path, label: str, icon: str = "fas fa-file-pdf"
+) -> str:
     """Record one download for ``docname`` and return its output relative URI."""
-    uri = f"{URI_PREFIX}/{digest}/{pdf.name}"
+    uri = f"{URI_PREFIX}/{digest}/{path.name}"
     entries = _store(env).setdefault(docname, [])
     # A page may hold several worksheets, but re-reading it must not duplicate.
     for entry in entries:
         if entry["uri"] == uri:
             entry["label"] = label
             return uri
-    entries.append({"uri": uri, "pdf": str(pdf), "label": label})
+    entries.append({"uri": uri, "path": str(path), "label": label, "icon": icon})
     return uri
 
 
@@ -86,7 +88,7 @@ def add_download_buttons(app, pagename, templatename, context, doctree) -> None:
                 "type": "link",
                 "url": pathto(entry["uri"], 1),
                 "text": entry["label"],
-                "icon": "fas fa-file-pdf",
+                "icon": entry.get("icon", "fas fa-file-pdf"),
                 "tooltip": entry["label"],
                 "label": BUTTON_LABEL,
             }
@@ -100,7 +102,7 @@ def copy_downloads(app, exception) -> None:
     outdir = Path(app.builder.outdir)
     for entries in _store(app.env).values():
         for entry in entries:
-            source = Path(entry["pdf"])
+            source = Path(entry["path"])
             if not source.is_file():
                 continue
             destination = outdir / entry["uri"]

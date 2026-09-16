@@ -17,6 +17,10 @@ def _preview(argument: str) -> str:
     return directives.choice(argument, ("svg", "png", "none"))
 
 
+def _yes_no(argument: str) -> str:
+    return directives.choice(argument, ("yes", "no"))
+
+
 class TypstDirective(SphinxDirective):
     """Compile a Typst source and offer it as a download.
 
@@ -40,6 +44,7 @@ class TypstDirective(SphinxDirective):
         "preview": _preview,
         "fillable": directives.flag,
         "inline": directives.flag,
+        "source": _yes_no,
         "label": directives.unchanged,
         "alt": directives.unchanged,
         "height": directives.length_or_unitless,
@@ -76,21 +81,46 @@ class TypstDirective(SphinxDirective):
             preview_page=self.options.get("page", 1),
         )
 
+        # An inline preview has to be an image Sphinx can see, which means it
+        # must live under the source directory. With no inline block there is
+        # nothing to keep there, so the output goes to a build local cache and
+        # the author's folders stay clean.
+        basedir = (
+            source.parent
+            if inline
+            else Path(self.env.doctreedir).parent / "typst-build"
+        )
+
         try:
-            result = render(request, source.parent)
+            result = render(request, basedir)
         except Exception as error:
             # A clean build is a hard requirement, so surface this as an error
             # rather than a warning that scrolls past unnoticed.
             raise self.error(f"Typst render failed for {relative}: {error}") from error
 
         label = self.options.get("label") or result.pdf.stem
+        digest = result.pdf.parent.name
         register(
             self.env,
             self.env.docname,
-            digest=result.pdf.parent.name,
-            pdf=result.pdf,
+            digest=digest,
+            path=result.pdf,
             label=label,
         )
+
+        want_source = self.options.get(
+            "source", "yes" if config.typst_render_link_source else "no"
+        )
+        if want_source == "yes":
+            register(
+                self.env,
+                self.env.docname,
+                digest=digest,
+                path=source,
+                label=f"{label} (source)",
+                icon="fas fa-file-code",
+            )
+
         if not inline:
             return []
 

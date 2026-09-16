@@ -69,6 +69,8 @@ def setup(app):
     # Headings inserted into the theme's download menu. The first names what
     # the page itself is, which differs per project: a manual, a chapter, a
     # page. An empty string leaves that group unlabelled.
+    # Offer the .typ source next to each rendered PDF.
+    app.add_config_value("typst_render_link_source", False, "env")
     app.add_config_value("typst_render_source_label", "Source", "html")
     app.add_config_value("typst_render_downloads_label", "Worksheets", "html")
 

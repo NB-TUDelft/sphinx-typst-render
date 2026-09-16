@@ -67,8 +67,15 @@ def stage_field_library(root: Path) -> Path | None:
 
 
 def _options(request: RenderRequest) -> dict[str, object]:
+    try:
+        source_key = request.source.resolve().relative_to(request.root.resolve()).as_posix()
+    except ValueError:
+        source_key = request.source.name
     return {
         "version": _CACHE_VERSION,
+        # Output lives outside the source tree, so the key must identify the
+        # source. Two worksheets may share a stem in different week folders.
+        "source": source_key,
         "preview": request.preview,
         "fillable": request.fillable,
         "ppi": request.ppi,

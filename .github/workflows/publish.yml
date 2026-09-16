@@ -1,0 +1,62 @@
+# Tag-triggered release. All of the work lives in the PyPI and Anaconda Publish
+# action, so this file only supplies the job scaffolding a composite action
+# cannot: the triggers, the environment and the OIDC permission.
+#
+# On a pull request this runs as a dry run: everything is built, tested and
+# checked, nothing is uploaded.
+#
+# One environment, `pypi`, covers both indexes: TestPyPI's trusted publisher is
+# registered with the same environment name, and only the index URL changes.
+#
+# NOTE: PyPI matches the trusted publisher on THIS file's name. Renaming
+# publish.yml breaks publishing with a 403 until the publisher config is
+# updated to match.
+#
+# Conda is switched off. This package depends on typst (the Python binding) and
+# typst-fillable, and neither is on conda-forge. conda-forge's `typst` is the
+# Rust CLI, a different program that happens to share the name, so declaring it
+# would produce a conda package that installs and then fails on `import typst`.
+# See RELEASING.md for what has to change to turn conda on.
+
+name: Publish
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      test_pypi:
+        description: "Use TestPyPI instead of PyPI"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # mints the OIDC token for PyPI; without it, auth fails
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: PlohnenSoftware/PyPI-Anaconda-Publish@v2
+        with:
+          test: pytest
+          python_versions: auto
+          version_module: src/sphinx_typst_render/__init__.py
+          tag: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          pypi_publish_url: ${{ (github.event_name == 'workflow_dispatch' && inputs.test_pypi) && 'https://test.pypi.org/legacy/' || '' }}
+          # Set to NB_TUDelft to enable conda, once the dependencies resolve.
+          anaconda_owner: ""
+          anaconda_api_key: ${{ secrets.ANACONDA_API_KEY }}
+          dry_run: ${{ github.event_name == 'pull_request' }}

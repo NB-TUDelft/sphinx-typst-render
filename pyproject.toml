@@ -61,3 +61,29 @@ sphinx-typst-render = "sphinx_typst_render:main"
 [build-system]
 requires = ["uv_build>=0.12.14,<0.13.0"]
 build-backend = "uv_build"
+
+# Consumed by NB-TUDelft/actions/python-publish, which renders the conda
+# recipe from the metadata above so the conda package can never drift from the
+# PyPI one. Only what conda needs and pyproject cannot express lives here.
+#
+# Conda publishing is currently disabled in .github/workflows/publish.yml.
+# Two dependencies block it: typst (the Python binding) and typst-fillable are
+# both PyPI only. conda-forge ships a `typst` package, but that is the Rust CLI
+# and does not provide the importable module, so mapping to it would be wrong.
+[tool.conda-recipe]
+# The package itself is pure Python, so a single noarch build serves every
+# architecture and every Python >=3.10.
+noarch = true
+build-channels = ["conda-forge"]
+maintainers = ["NB-TUDelft", "Zamkorus"]
+test-imports = [
+    "sphinx_typst_render",
+]
+# PyPI project name -> conda-forge package name, where the two differ.
+name-map = {}
+# Escape hatch keyed by normalized PyPI name: replaces the auto-translated
+# spec outright. Use when a requirement carries an environment marker or
+# extras, which conda's dependency syntax cannot express.
+requirement-overrides = {}
+# Run-time requirements that apply only to the conda package.
+extra-run = []
