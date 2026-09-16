@@ -1,0 +1,22 @@
+/* Section headings inside the theme's download dropdown.
+   The bundled Bootstrap subset does not style .dropdown-header, so do it here.
+   Colours come from pydata-sphinx-theme variables, which follow the light and
+   dark theme toggle, with plain fallbacks for other themes. */
+.dropdown-download-buttons .dropdown-menu .dropdown-header {
+  display: block;
+  margin: 0;
+  padding: 0.35rem 1rem 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--pst-color-text-muted, #6c757d);
+}
+
+/* Separate the second and later groups from the one above. */
+.dropdown-download-buttons .dropdown-menu .dropdown-header:not(:first-child) {
+  margin-top: 0.3rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--pst-color-border, #d1d5da);
+}

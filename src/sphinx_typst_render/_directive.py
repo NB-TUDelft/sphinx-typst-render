@@ -10,6 +10,7 @@ from sphinx import addnodes
 from sphinx.util.docutils import SphinxDirective
 
 from ._compile import RenderRequest, render, stage_field_library
+from ._downloads import register
 
 
 def _preview(argument: str) -> str:
@@ -19,12 +20,15 @@ def _preview(argument: str) -> str:
 class TypstDirective(SphinxDirective):
     """Compile a Typst source and offer it as a download.
 
+    The block renders nothing into the page. The PDF is added to the theme's
+    download menu, next to the page's own source files. Pass ``:inline:`` to
+    also show a preview and a link in the body.
+
     ::
 
         ```{typst} worksheets/week3.typ
         :label: Week 3 worksheet
         :fillable:
-        :height: 420px
         ```
     """
 
@@ -35,6 +39,7 @@ class TypstDirective(SphinxDirective):
     option_spec = {
         "preview": _preview,
         "fillable": directives.flag,
+        "inline": directives.flag,
         "label": directives.unchanged,
         "alt": directives.unchanged,
         "height": directives.length_or_unitless,
@@ -57,10 +62,15 @@ class TypstDirective(SphinxDirective):
         if config.typst_render_stage_field_library:
             stage_field_library(root)
 
+        inline = "inline" in self.options
+        # Without an inline block there is nothing to show a preview in, so do
+        # not spend a second Typst compile on one.
+        default_preview = config.typst_render_preview if inline else "none"
+
         request = RenderRequest(
             source=source,
             root=root,
-            preview=self.options.get("preview", config.typst_render_preview),
+            preview=self.options.get("preview", default_preview),
             fillable="fillable" in self.options,
             ppi=self.options.get("ppi", config.typst_render_ppi),
             preview_page=self.options.get("page", 1),
@@ -72,6 +82,17 @@ class TypstDirective(SphinxDirective):
             # A clean build is a hard requirement, so surface this as an error
             # rather than a warning that scrolls past unnoticed.
             raise self.error(f"Typst render failed for {relative}: {error}") from error
+
+        label = self.options.get("label") or result.pdf.stem
+        register(
+            self.env,
+            self.env.docname,
+            digest=result.pdf.parent.name,
+            pdf=result.pdf,
+            label=label,
+        )
+        if not inline:
+            return []
 
         container = nodes.container(
             classes=["typst-render", *self.options.get("class", [])]
@@ -86,7 +107,6 @@ class TypstDirective(SphinxDirective):
                 image["height"] = self.options["height"]
             container += image
 
-        label = self.options.get("label") or f"Download {result.pdf.name}"
         reference = addnodes.download_reference(
             "",
             "",

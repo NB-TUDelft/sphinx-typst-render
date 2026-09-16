@@ -35,24 +35,27 @@ extensions = ["sphinx_typst_render"]
 ````markdown
 ```{typst} worksheets/week3.typ
 :label: Week 3 worksheet
-:height: 420px
 ```
 ````
 
-That compiles `worksheets/week3.typ`, writes `week3.pdf` and `week3.svg` beside
-it, shows the SVG inline, and renders a download link for the PDF.
+The block renders **nothing into the page**. It compiles `worksheets/week3.typ`
+and adds the resulting PDF to the theme's download menu, beside the page's own
+`.ipynb` and `.pdf` entries, under a heading you configure.
+
+Pass `:inline:` to also show a preview image and a download link in the body.
 
 ### Options
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `:preview:` | `svg` | `svg`, `png`, or `none` to skip the inline image. |
+| `:preview:` | `none`, or `svg` with `:inline:` | `svg`, `png`, or `none`. |
 | `:page:` | `1` | Which page to preview in a multi page document. |
 | `:height:` | unset | Height of the preview image, e.g. `420px`. |
 | `:alt:` | generated | Alt text for the preview image. |
 | `:label:` | generated | Text of the download link. |
 | `:ppi:` | `144` | Resolution of a `png` preview. |
 | `:class:` | none | Extra CSS classes on the wrapper. |
+| `:inline:` | off | Also show a preview and link in the page body. |
 | `:fillable:` | off | Add interactive form fields. See below. |
 
 ### Configuration
@@ -62,10 +65,47 @@ it, shows the SVG inline, and renders a download link for the PDF.
 | `typst_render_preview` | `"svg"` | Default for `:preview:`. |
 | `typst_render_ppi` | `144.0` | Default for `:ppi:`. |
 | `typst_render_stage_field_library` | `True` | Stage `capture_field.typ` into the source root. |
+| `typst_render_source_label` | `"Source"` | Heading above the page's own downloads. |
+| `typst_render_downloads_label` | `"Worksheets"` | Heading above the rendered PDFs. |
+
+## The download menu
+
+Rendered PDFs are added to the download dropdown that sphinx-book-theme puts in
+the article header, so students find them where they already look for the page
+source. Two headings separate the groups, and both are configurable because
+what the page *is* differs per project:
+
+```yaml
+sphinx:
+  config:
+    typst_render_source_label: Manual      # or Chapter, Page, Book
+    typst_render_downloads_label: Worksheets
+```
+
+That renders as:
+
+```
+Manual
+  .ipynb
+  .pdf
+Worksheets
+  Organizer 1.1 (fillable)
+```
+
+Set either to an empty string to leave that group unlabelled.
+
+The headings are inserted by a small stylesheet and script shipped with this
+package. They are not built server side because the theme's button macro
+dispatches on a fixed set of item types and forces its own CSS class, so a
+non-link entry cannot be expressed through the `header_buttons` context.
+
+Without a theme that provides such a menu, the PDFs are still written and
+copied, and a warning names the page whose downloads are unreachable. Use
+`:inline:` in that case.
 
 ## Why SVG previews
 
-An SVG preview is line art, so a theme that inverts diagrams for dark mode
+With `:inline:`, an SVG preview is line art, so a theme that inverts diagrams for dark mode
 handles it correctly, and it stays sharp at any zoom. Use `:preview: png` for a
 worksheet that contains photographs, and pair it with whatever class your theme
 uses to opt out of inversion:
