@@ -104,3 +104,24 @@ def test_fillable_pdf_has_form_fields(tmp_path: Path) -> None:
         "u_in": "/Tx",
         "clipped": "/Btn",
     }
+
+
+def test_text_fields_have_no_length_cap(tmp_path: Path) -> None:
+    """ReportLab caps text fields at 100 characters by default."""
+    stage_field_library(tmp_path)
+    body = (
+        '#import "/_typst_lib/capture_field.typ": text_field, textarea_field\n'
+        "#set page(width: 120mm, height: 60mm)\n"
+        '= Worksheet\n\nValue: #text_field("u_in")\n\n'
+        '#textarea_field("discussion", height: 30pt)\n'
+    )
+    result = render(_request(tmp_path, body, fillable=True), tmp_path)
+
+    reader = PdfReader(str(result.pdf))
+    capped = []
+    for page in reader.pages:
+        for annot in page.get("/Annots", []) or []:
+            obj = annot.get_object()
+            if "/MaxLen" in obj:
+                capped.append((str(obj.get("/T")), obj["/MaxLen"]))
+    assert not capped, f"fields still capped: {capped}"

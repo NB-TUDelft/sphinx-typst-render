@@ -17,7 +17,7 @@ OUT_DIRNAME = "_typst"
 LIB_FILENAME = "capture_field.typ"
 
 #: Bumped whenever the output layout changes, to invalidate stale caches.
-_CACHE_VERSION = 1
+_CACHE_VERSION = 2
 
 
 @dataclass(frozen=True)
@@ -115,6 +115,35 @@ def _fingerprint(request: RenderRequest) -> str:
     return digest.hexdigest()
 
 
+def _unbound_field_lengths(writer) -> None:
+    """Drop the character cap ReportLab puts on every text field.
+
+    ``AcroForm.textfield()`` defaults to ``maxlen=100`` and typst-fillable does
+    not override it, so a field silently refuses input after 100 characters.
+    A worksheet answer box that stops mid-sentence is worse than useless, and
+    there is no sensible cap for one, so remove /MaxLen rather than raise it.
+    """
+    seen: set[int] = set()
+
+    def strip(obj) -> None:
+        if obj is None or id(obj) in seen:
+            return
+        seen.add(id(obj))
+        if "/MaxLen" in obj:
+            del obj["/MaxLen"]
+        for kid in obj.get("/Kids", []) or []:
+            strip(kid.get_object())
+
+    for page in writer.pages:
+        for annot in page.get("/Annots", []) or []:
+            strip(annot.get_object())
+
+    acroform = writer._root_object.get("/AcroForm")
+    if acroform:
+        for field in acroform.get("/Fields", []) or []:
+            strip(field.get_object())
+
+
 def _add_form_fields(base: bytes, request: RenderRequest) -> bytes:
     """Overlay interactive AcroForm fields onto an already compiled PDF.
 
@@ -149,6 +178,7 @@ def _add_form_fields(base: bytes, request: RenderRequest) -> bytes:
     for index, page in enumerate(reader.pages):
         if index < len(writer.pages):
             writer.pages[index].merge_page(page, over=False)
+    _unbound_field_lengths(writer)
     # Ask the reader to build field appearances, so a blank field is visible.
     writer.set_need_appearances_writer(True)
 
