@@ -5,7 +5,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ._compile import RenderRequest, RenderResult, render, stage_field_library
+from ._compile import (
+    DEFAULT_MAX_LENGTH,
+    RenderRequest,
+    RenderResult,
+    render,
+    stage_field_library,
+)
 from ._directive import TypstDirective
 from ._downloads import (
     add_download_buttons,
@@ -15,6 +21,7 @@ from ._downloads import (
 )
 
 __all__ = [
+    "DEFAULT_MAX_LENGTH",
     "RenderRequest",
     "RenderResult",
     "TypstDirective",
@@ -22,7 +29,7 @@ __all__ = [
     "setup",
     "stage_field_library",
 ]
-__version__ = "0.2.3"
+__version__ = "0.2.4"
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -66,6 +73,9 @@ def setup(app):
     app.add_config_value("typst_render_preview", "svg", "env")
     app.add_config_value("typst_render_ppi", 144.0, "env")
     app.add_config_value("typst_render_stage_field_library", True, "env")
+    # Characters a generated text field accepts. Set to 0 to strip the limit
+    # entirely, which some readers mis-handle as zero, so it is opt in.
+    app.add_config_value("typst_render_field_max_length", DEFAULT_MAX_LENGTH, "env")
     # Headings inserted into the theme's download menu. The first names what
     # the page itself is, which differs per project: a manual, a chapter, a
     # page. An empty string leaves that group unlabelled.

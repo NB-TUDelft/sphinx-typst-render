@@ -17,7 +17,12 @@ OUT_DIRNAME = "_typst"
 LIB_FILENAME = "capture_field.typ"
 
 #: Bumped whenever the output layout changes, to invalidate stale caches.
-_CACHE_VERSION = 2
+_CACHE_VERSION = 3
+
+#: Characters a generated text field accepts unless configured otherwise.
+#: Large enough that no worksheet answer reaches it, and written explicitly
+#: because some readers treat a missing /MaxLen as zero and refuse all input.
+DEFAULT_MAX_LENGTH = 10000
 
 
 @dataclass(frozen=True)
@@ -30,6 +35,9 @@ class RenderRequest:
     fillable: bool = False
     ppi: float | None = None
     preview_page: int = 1
+    #: Characters a text field accepts. 0 removes the limit entirely, which
+    #: some readers mis-handle as zero. See _apply_field_lengths.
+    max_length: int = DEFAULT_MAX_LENGTH
 
 
 @dataclass(frozen=True)
@@ -80,6 +88,7 @@ def _options(request: RenderRequest) -> dict[str, object]:
         "fillable": request.fillable,
         "ppi": request.ppi,
         "page": request.preview_page,
+        "max_length": request.max_length,
     }
 
 
@@ -115,33 +124,43 @@ def _fingerprint(request: RenderRequest) -> str:
     return digest.hexdigest()
 
 
-def _unbound_field_lengths(writer) -> None:
-    """Drop the character cap ReportLab puts on every text field.
+def _apply_field_lengths(writer, max_length: int) -> None:
+    """Set, or remove, the character cap on every text field.
 
-    ``AcroForm.textfield()`` defaults to ``maxlen=100`` and typst-fillable does
-    not override it, so a field silently refuses input after 100 characters.
-    A worksheet answer box that stops mid-sentence is worse than useless, and
-    there is no sensible cap for one, so remove /MaxLen rather than raise it.
+    Three behaviours are in play here. ReportLab's ``AcroForm.textfield()``
+    defaults to ``maxlen=100`` and typst-fillable does not override it, so a
+    field silently refuses input after 100 characters. Removing ``/MaxLen``
+    altogether is not safe either, because some readers treat a missing cap as
+    zero and then refuse all input. So the default is to write an explicit,
+    generous value, and ``max_length = 0`` drops the key for anyone who has
+    checked that their readers cope.
+
+    Only text fields are touched. A cap on a checkbox would be meaningless.
     """
+    from pypdf.generic import NameObject, NumberObject
+
     seen: set[int] = set()
 
-    def strip(obj) -> None:
+    def apply(obj) -> None:
         if obj is None or id(obj) in seen:
             return
         seen.add(id(obj))
-        if "/MaxLen" in obj:
-            del obj["/MaxLen"]
+        if obj.get("/FT") == "/Tx":
+            if max_length > 0:
+                obj[NameObject("/MaxLen")] = NumberObject(max_length)
+            elif "/MaxLen" in obj:
+                del obj["/MaxLen"]
         for kid in obj.get("/Kids", []) or []:
-            strip(kid.get_object())
+            apply(kid.get_object())
 
     for page in writer.pages:
         for annot in page.get("/Annots", []) or []:
-            strip(annot.get_object())
+            apply(annot.get_object())
 
     acroform = writer._root_object.get("/AcroForm")
     if acroform:
         for field in acroform.get("/Fields", []) or []:
-            strip(field.get_object())
+            apply(field.get_object())
 
 
 def _add_form_fields(base: bytes, request: RenderRequest) -> bytes:
@@ -178,7 +197,7 @@ def _add_form_fields(base: bytes, request: RenderRequest) -> bytes:
     for index, page in enumerate(reader.pages):
         if index < len(writer.pages):
             writer.pages[index].merge_page(page, over=False)
-    _unbound_field_lengths(writer)
+    _apply_field_lengths(writer, request.max_length)
     # Ask the reader to build field appearances, so a blank field is visible.
     writer.set_need_appearances_writer(True)
 

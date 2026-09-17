@@ -50,6 +50,7 @@ class TypstDirective(SphinxDirective):
         "height": directives.length_or_unitless,
         "ppi": directives.positive_int,
         "page": directives.positive_int,
+        "max-length": directives.nonnegative_int,
         "class": directives.class_option,
     }
 
@@ -79,6 +80,9 @@ class TypstDirective(SphinxDirective):
             fillable="fillable" in self.options,
             ppi=self.options.get("ppi", config.typst_render_ppi),
             preview_page=self.options.get("page", 1),
+            max_length=self.options.get(
+                "max-length", config.typst_render_field_max_length
+            ),
         )
 
         # An inline preview has to be an image Sphinx can see, which means it

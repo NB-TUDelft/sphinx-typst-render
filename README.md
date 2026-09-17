@@ -57,6 +57,7 @@ Pass `:inline:` to also show a preview image and a download link in the body.
 | `:class:` | none | Extra CSS classes on the wrapper. |
 | `:inline:` | off | Also show a preview and link in the page body. |
 | `:fillable:` | off | Add interactive form fields. See below. |
+| `:max-length:` | from config | Characters a text field accepts. `0` strips the limit. |
 
 ### Configuration
 
@@ -67,6 +68,7 @@ Pass `:inline:` to also show a preview image and a download link in the body.
 | `typst_render_stage_field_library` | `True` | Stage `capture_field.typ` into the source root. |
 | `typst_render_source_label` | `"Source"` | Heading above the page's own downloads. |
 | `typst_render_downloads_label` | `"Worksheets"` | Heading above the rendered PDFs. |
+| `typst_render_field_max_length` | `10000` | Characters a text field accepts. `0` strips the limit. |
 
 ## The download menu
 
@@ -146,6 +148,26 @@ yourself.
 
 Available helpers are `text_field`, `textarea_field`, `checkbox_field`, and
 `radio_field`, plus the lower level `capture_field`.
+
+## Field length
+
+ReportLab caps every text field at 100 characters by default, which stops a
+worksheet answer mid-sentence. This package overrides that with an explicit,
+generous cap:
+
+```yaml
+sphinx:
+  config:
+    typst_render_field_max_length: 10000   # 0 strips the limit entirely
+```
+
+The value is written explicitly rather than omitted because **some readers
+treat a missing `/MaxLen` as zero** and then refuse all input. Stripping it is
+still available with `0`, for projects that have checked their readers cope.
+Either way it is a config change, not a new release of this package. A single
+block can override it with `:max-length:`.
+
+Only text fields are affected. A cap on a checkbox would be meaningless.
 
 ## Caching
 

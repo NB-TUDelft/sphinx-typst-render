@@ -7,7 +7,12 @@ from pathlib import Path
 import pytest
 from pypdf import PdfReader
 
-from sphinx_typst_render import RenderRequest, render, stage_field_library
+from sphinx_typst_render import (
+    DEFAULT_MAX_LENGTH,
+    RenderRequest,
+    render,
+    stage_field_library,
+)
 
 SINGLE = "#set page(width: 80mm, height: 40mm)\n= Worksheet\n"
 DOUBLE = SINGLE + "#pagebreak()\nSecond page\n"
@@ -106,22 +111,60 @@ def test_fillable_pdf_has_form_fields(tmp_path: Path) -> None:
     }
 
 
-def test_text_fields_have_no_length_cap(tmp_path: Path) -> None:
-    """ReportLab caps text fields at 100 characters by default."""
-    stage_field_library(tmp_path)
-    body = (
-        '#import "/_typst_lib/capture_field.typ": text_field, textarea_field\n'
-        "#set page(width: 120mm, height: 60mm)\n"
-        '= Worksheet\n\nValue: #text_field("u_in")\n\n'
-        '#textarea_field("discussion", height: 30pt)\n'
-    )
-    result = render(_request(tmp_path, body, fillable=True), tmp_path)
-
-    reader = PdfReader(str(result.pdf))
-    capped = []
-    for page in reader.pages:
+def _field_caps(pdf: Path) -> dict[str, object]:
+    """Map field name -> /MaxLen, using None where no cap is set."""
+    caps = {}
+    for page in PdfReader(str(pdf)).pages:
         for annot in page.get("/Annots", []) or []:
             obj = annot.get_object()
-            if "/MaxLen" in obj:
-                capped.append((str(obj.get("/T")), obj["/MaxLen"]))
-    assert not capped, f"fields still capped: {capped}"
+            if obj.get("/T") is not None and obj.get("/FT") == "/Tx":
+                caps[str(obj["/T"])] = obj.get("/MaxLen")
+    return caps
+
+
+FIELDS_BODY = (
+    '#import "/_typst_lib/capture_field.typ": text_field, textarea_field\n'
+    "#set page(width: 120mm, height: 60mm)\n"
+    '= Worksheet\n\nValue: #text_field("u_in")\n\n'
+    '#textarea_field("discussion", height: 30pt)\n'
+)
+
+
+def test_default_cap_is_generous_not_reportlabs_hundred(tmp_path: Path) -> None:
+    """ReportLab caps text fields at 100 characters by default."""
+    stage_field_library(tmp_path)
+    result = render(_request(tmp_path, FIELDS_BODY, fillable=True), tmp_path)
+
+    caps = _field_caps(result.pdf)
+    assert caps, "no text fields found"
+    assert set(caps) == {"u_in", "discussion"}
+    for name, cap in caps.items():
+        assert cap == DEFAULT_MAX_LENGTH, f"{name} capped at {cap}"
+
+
+def test_cap_is_configurable(tmp_path: Path) -> None:
+    stage_field_library(tmp_path)
+    result = render(_request(tmp_path, FIELDS_BODY, fillable=True, max_length=250), tmp_path)
+    assert set(_field_caps(result.pdf).values()) == {250}
+
+
+def test_zero_strips_the_cap(tmp_path: Path) -> None:
+    """Some readers mis-handle a missing cap, so stripping stays opt in."""
+    stage_field_library(tmp_path)
+    result = render(_request(tmp_path, FIELDS_BODY, fillable=True, max_length=0), tmp_path)
+    assert set(_field_caps(result.pdf).values()) == {None}
+
+
+def test_checkboxes_never_get_a_cap(tmp_path: Path) -> None:
+    stage_field_library(tmp_path)
+    body = (
+        '#import "/_typst_lib/capture_field.typ": checkbox_field\n'
+        "#set page(width: 120mm, height: 40mm)\n"
+        'Done? #checkbox_field("done")\n'
+    )
+    result = render(_request(tmp_path, body, fillable=True), tmp_path)
+    for page in PdfReader(str(result.pdf)).pages:
+        for annot in page.get("/Annots", []) or []:
+            obj = annot.get_object()
+            if obj.get("/FT") == "/Btn":
+                assert "/MaxLen" not in obj
