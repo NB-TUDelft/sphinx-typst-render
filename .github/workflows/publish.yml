@@ -39,8 +39,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    name: Build and check
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: PlohnenSoftware/PyPI-Anaconda-Publish@v2
+        with:
+          test: pytest
+          python_versions: auto
+          version_module: src/sphinx_typst_render/__init__.py
+          anaconda_owner: ""
+          dry_run: true
+
   publish:
     name: Build and publish
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
