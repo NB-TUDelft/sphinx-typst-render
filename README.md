@@ -149,6 +149,14 @@ yourself.
 Available helpers are `text_field`, `textarea_field`, `checkbox_field`, and
 `radio_field`, plus the lower level `capture_field`.
 
+Fillable PDFs keep the source document's metadata, including its title and
+author. Set a title in Typst to use it in PDF viewer tabs:
+
+```typ
+#set document(title: "Worksheet", author: "NB2420")
+= Worksheet
+```
+
 ## Field length
 
 ReportLab caps every text field at 100 characters by default, which stops a

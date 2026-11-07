@@ -16,8 +16,8 @@ LIB_DIRNAME = "_typst_lib"
 OUT_DIRNAME = "_typst"
 LIB_FILENAME = "capture_field.typ"
 
-#: Bumped whenever the output layout changes, to invalidate stale caches.
-_CACHE_VERSION = 3
+#: Bumped whenever the generated output changes, to invalidate stale caches.
+_CACHE_VERSION = 4
 
 #: Characters a generated text field accepts unless configured otherwise.
 #: Large enough that no worksheet answer reaches it, and written explicitly
@@ -179,6 +179,7 @@ def _add_form_fields(base: bytes, request: RenderRequest) -> bytes:
     from io import BytesIO
 
     from pypdf import PdfReader, PdfWriter
+    from pypdf.generic import BooleanObject, NameObject
     from typst_fillable import create_form_overlay, extract_field_metadata
 
     fields = extract_field_metadata(request.source, root=request.root)
@@ -194,6 +195,17 @@ def _add_form_fields(base: bytes, request: RenderRequest) -> bytes:
     )
 
     writer = PdfWriter(clone_from=overlay)
+    # Keep the document's metadata instead of ReportLab's "untitled" defaults.
+    # Replace the info dictionary so absent values do not inherit overlay data.
+    writer.metadata = reader.metadata
+    if "/Metadata" in reader.trailer["/Root"]:
+        writer.root_object[NameObject("/Metadata")] = (
+            reader.trailer["/Root"].raw_get("/Metadata").clone(writer)
+        )
+    if reader.metadata and reader.metadata.title:
+        writer.create_viewer_preferences()[NameObject("/DisplayDocTitle")] = (
+            BooleanObject(True)
+        )
     for index, page in enumerate(reader.pages):
         if index < len(writer.pages):
             writer.pages[index].merge_page(page, over=False)
