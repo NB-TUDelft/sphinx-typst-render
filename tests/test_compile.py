@@ -111,6 +111,56 @@ def test_fillable_pdf_has_form_fields(tmp_path: Path) -> None:
     }
 
 
+@pytest.mark.parametrize("with_fields", [True, False])
+def test_fillable_pdf_preserves_document_metadata(
+    tmp_path: Path, with_fields: bool
+) -> None:
+    stage_field_library(tmp_path)
+    body = (
+        '#import "/_typst_lib/capture_field.typ": text_field\n'
+        '#set document(title: "Log Book Entry 1.1", author: "NB2420", '
+        'description: "Voltage divider", keywords: ("electronics", "logbook"))\n'
+        + SINGLE
+        + ('Value: #text_field("u_in")\n' if with_fields else "")
+    )
+    result = render(_request(tmp_path, body, fillable=True), tmp_path)
+    reader = PdfReader(result.pdf)
+
+    assert reader.metadata.title == "Log Book Entry 1.1"
+    assert reader.metadata.author == "NB2420"
+    assert reader.metadata.subject == "Voltage divider"
+    assert "electronics" in reader.metadata.keywords
+    assert reader.xmp_metadata.dc_title == {"x-default": "Log Book Entry 1.1"}
+    assert reader.xmp_metadata.dc_creator == ["NB2420"]
+    if with_fields:
+        preferences = reader.trailer["/Root"]["/ViewerPreferences"]
+        assert preferences["/DisplayDocTitle"].value is True
+        assert set(reader.get_fields()) == {"u_in"}
+        widgets = [
+            annotation.get_object()
+            for page in reader.pages
+            for annotation in page.get("/Annots", [])
+            if annotation.get_object().get("/Subtype") == "/Widget"
+        ]
+        assert [widget["/T"] for widget in widgets] == ["u_in"]
+
+
+def test_fillable_pdf_does_not_inherit_overlay_metadata(tmp_path: Path) -> None:
+    stage_field_library(tmp_path)
+    body = (
+        '#import "/_typst_lib/capture_field.typ": text_field\n'
+        + SINGLE
+        + 'Value: #text_field("u_in")\n'
+    )
+    result = render(_request(tmp_path, body, fillable=True), tmp_path)
+    reader = PdfReader(result.pdf)
+
+    assert reader.metadata.title is None
+    assert reader.metadata.author is None
+    assert "Typst" in reader.metadata.creator
+    assert set(reader.get_fields()) == {"u_in"}
+
+
 def _field_caps(pdf: Path) -> dict[str, object]:
     """Map field name -> /MaxLen, using None where no cap is set."""
     caps = {}
