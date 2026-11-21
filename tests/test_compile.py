@@ -218,3 +218,25 @@ def test_checkboxes_never_get_a_cap(tmp_path: Path) -> None:
             obj = annot.get_object()
             if obj.get("/FT") == "/Btn":
                 assert "/MaxLen" not in obj
+
+
+def test_fillable_pdf_keeps_bookmarks(tmp_path: Path) -> None:
+    """The overlay used to drop Typst's outline; the editor reads it to tag images."""
+    stage_field_library(tmp_path)
+    body = (
+        '#import "/_typst_lib/capture_field.typ": text_field\n'
+        "#set page(width: 120mm, height: 80mm)\n"
+        '= First\n\nValue: #text_field("a")\n\n== Inner\n\nText\n'
+        "#pagebreak()\n= Second\n"
+    )
+    result = render(_request(tmp_path, body, preview="none", fillable=True), tmp_path)
+    reader = PdfReader(str(result.pdf))
+    assert reader.get_fields()                      # still a form
+    first, children, second = reader.outline
+    assert (first.title, second.title) == ("First", "Second")
+    assert [child.title for child in children] == ["Inner"]
+    assert reader.get_destination_page_number(first) == 0
+    assert reader.get_destination_page_number(second) == 1
+    # The height on the page, which places an image under the right heading.
+    assert first.typ == "/XYZ" and first.top is not None
+

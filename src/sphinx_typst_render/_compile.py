@@ -17,7 +17,8 @@ OUT_DIRNAME = "_typst"
 LIB_FILENAME = "capture_field.typ"
 
 #: Bumped whenever the generated output changes, to invalidate stale caches.
-_CACHE_VERSION = 4
+#: 5: fillable PDFs keep the document's bookmarks.
+_CACHE_VERSION = 5
 
 #: Characters a generated text field accepts unless configured otherwise.
 #: Large enough that no worksheet answer reaches it, and written explicitly
@@ -163,6 +164,38 @@ def _apply_field_lengths(writer, max_length: int) -> None:
             apply(field.get_object())
 
 
+def _copy_outline(reader, writer) -> None:
+    """Carry the document's bookmarks over to the fillable PDF.
+
+    The fillable PDF is built from the overlay, so the outline Typst wrote,
+    one entry per bookmarked heading, would otherwise be lost. Readers show it
+    as the bookmark panel, and the editor reads each entry's page and height
+    to tag an inserted image with the section it belongs to.
+    """
+    from pypdf.generic import Fit, NullObject
+
+    def number(value):
+        return None if value is None or isinstance(value, NullObject) else float(value)
+
+    def copy(items, parent=None) -> None:
+        last = None
+        for item in items:
+            if isinstance(item, list):  # the children of the entry before it
+                if last is not None:
+                    copy(item, last)
+                continue
+            page = reader.get_destination_page_number(item)
+            if page is None or not 0 <= page < len(writer.pages):
+                continue
+            if item.typ == "/XYZ":
+                fit = Fit.xyz(left=number(item.left), top=number(item.top), zoom=number(item.zoom))
+            else:
+                fit = Fit.fit()
+            last = writer.add_outline_item(item.title, page, parent=parent, fit=fit)
+
+    copy(reader.outline)
+
+
 def _add_form_fields(base: bytes, request: RenderRequest) -> bytes:
     """Overlay interactive AcroForm fields onto an already compiled PDF.
 
@@ -209,6 +242,7 @@ def _add_form_fields(base: bytes, request: RenderRequest) -> bytes:
     for index, page in enumerate(reader.pages):
         if index < len(writer.pages):
             writer.pages[index].merge_page(page, over=False)
+    _copy_outline(reader, writer)
     _apply_field_lengths(writer, request.max_length)
     # Ask the reader to build field appearances, so a blank field is visible.
     writer.set_need_appearances_writer(True)
