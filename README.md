@@ -198,4 +198,4 @@ them too and let CI regenerate them.
 
 ## Licence
 
-MIT
+GNU Affero General Public License v3.0 or later, see [LICENSE](LICENSE).
