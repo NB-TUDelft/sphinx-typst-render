@@ -220,6 +220,11 @@ block's other entries.
 |---|---|
 | `:highlight:` | Labels of entries to repeat in a box on top, comma separated |
 | `:highlight-title:` | The heading of that box (default `Highlight`) |
+| `:highlight-weekly:` | A group and its first day, like `Week 3, 2026-11-21`: the box shows that group from that day, and each next group seven days later |
+
+With `:highlight-weekly:` the reader's browser picks the box for today, so it
+moves on by itself without a rebuild. Before the first day and after the last
+group there is no box.
 
 The list is filled in once every page has been read, and the overview page is
 rebuilt whenever another page changes, so an incremental build does not leave

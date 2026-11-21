@@ -102,3 +102,6 @@
   border-radius: 0.8rem;
   background: color-mix(in srgb, var(--pst-color-primary, #0a7d91) 8%, transparent);
 }
+.typst-overview-highlight[hidden] {
+  display: none;
+}
