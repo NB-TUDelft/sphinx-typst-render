@@ -23,7 +23,7 @@ export async function insertBlankPage() {
     const M = 40;
     const head = ansi('Text for: ' + exercise);
     const headLines = wrapLines(head, bold, 12, W - 2 * M);
-    headLines.forEach((ln, i) => ln && page.drawText(ln, { x: M, y: H - M - 12 - i * 15, size: 12, font: bold }));
+    headLines.forEach((ln, i) => { if (ln) page.drawText(ln, { x: M, y: H - M - 12 - i * 15, size: 12, font: bold }); });
     const subY = H - M - 12 - headLines.length * 15 - 2;
     page.drawText('Added page', { x: M, y: subY, size: 8, font: regular, color: rgb(0.45, 0.45, 0.45) });
     const id = 'added_text_' + Date.now().toString(36);
@@ -62,7 +62,7 @@ export async function insertImagePage() {
     const M = 40, notesH = rows > 3 ? 90 : 120, gap = 8;
     const head = ansi('Image for: ' + exercise);
     const headLines = wrapLines(head, bold, 12, W - 2 * M);
-    headLines.forEach((ln, i) => ln && page.drawText(ln, { x: M, y: H - M - 12 - i * 15, size: 12, font: bold }));
+    headLines.forEach((ln, i) => { if (ln) page.drawText(ln, { x: M, y: H - M - 12 - i * 15, size: 12, font: bold }); });
     const subY = H - M - 12 - headLines.length * 15 - 2;
     page.drawText('Added page', { x: M, y: subY, size: 8, font: regular, color: rgb(0.45, 0.45, 0.45) });
     const pageId = 'p' + Date.now().toString(36);

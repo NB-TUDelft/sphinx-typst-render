@@ -120,7 +120,7 @@ export function buildBar() {
     $('div', { class: 'lb-menu-note' }, 'Your work is stored only in this browser on this device.'),
     menuItem('lbClearThis', `Delete saved work for this ${config.noun}…`, () => clearSaved(false)),
     menuItem('lbClearAll', `Delete saved work for all ${config.nounPlural}…`, () => clearSaved(true)));
-  ui.pmenu.querySelectorAll('.lb-menu-item').forEach(b => b.classList.add('lb-menu-danger'));
+  ui.pmenu.querySelectorAll('.lb-menu-item').forEach(b => { b.classList.add('lb-menu-danger'); });
   const shieldBtn = btn('lbPrivacy', 'Privacy and stored data', 'shield', e => {
     e.stopPropagation(); const open = ui.pmenu.hidden; closeMenu(); if (open) { ui.pmenu.hidden = false; ui.pmenu.querySelector('button')?.focus(); }
   }, { cls: 'lb-privacy' });
@@ -209,7 +209,8 @@ function buildStyle(mode) {
   ui.style.replaceChildren();
   ui.style.hidden = !st;
   if (!st) return;
-  const c = chosen[mode] ||= { color: st.colors[0], size: st.sizes ? st.sizes[1][0] : null };
+  if (!chosen[mode]) chosen[mode] = { color: st.colors[0], size: st.sizes ? st.sizes[1][0] : null };
+  const c = chosen[mode];
   const apply = () => {
     const bus = app().eventBus;
     bus.dispatch('switchannotationeditorparams', { source: window, type: st.colorParam, value: c.color });

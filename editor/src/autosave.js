@@ -32,7 +32,7 @@ export async function autosaveNow(fromTransform = false) {
 }
 
 export async function offerRestore() {
-  document.querySelectorAll('.lb-restore').forEach(b => b.remove());
+  document.querySelectorAll('.lb-restore').forEach(b => { b.remove(); });
   state.restorePending = false;
   const id = state.saveKey, doc = state.doc;
   await migrateSaves();

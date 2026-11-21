@@ -9,7 +9,7 @@ import { placeInSlot, slotPageIndex } from './document.js';
 export function decoratePage(pageNumber) {
   const pv = app().pdfViewer.getPageView(pageNumber - 1);
   if (!pv || !pv.div) return;
-  pv.div.querySelectorAll('.lb-slot').forEach(e => e.remove());
+  pv.div.querySelectorAll('.lb-slot').forEach(e => { e.remove(); });
   for (const slot of state.slots) {
     if (slotPageIndex(slot) !== pageNumber - 1) continue;
     // pdf.js 6 dropped convertToViewportRectangle; map both corners instead.

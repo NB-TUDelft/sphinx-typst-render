@@ -64,7 +64,8 @@ async function drawThumb(item, gen) {
     await canvas._lbTask?.promise.catch(() => {});
     canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
     const mode = AnnotationMode.ENABLE_STORAGE;   // include typed answers
-    const task = canvas._lbTask = page.render({ canvas, canvasContext: canvas.getContext('2d'), viewport: vp, annotationMode: mode });
+    const task = page.render({ canvas, canvasContext: canvas.getContext('2d'), viewport: vp, annotationMode: mode });
+    canvas._lbTask = task;
     await task.promise;
   } catch (err) {
     if (err?.name !== 'RenderingCancelledException') console.warn('[typst-editor] thumbnail', n, err);

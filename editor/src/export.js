@@ -202,7 +202,7 @@ export async function flattenedBytes(decide = askOverflow) {
     };
     newPage();
     const headLines = wrapLines(safe(`Continued from: ${o.label} (page ${o.page})`), font, 14, PW - 2 * M);
-    headLines.forEach((ln, i) => ln && pg.drawText(ln, { x: M, y: y - 14 - i * 18, size: 14, font }));
+    headLines.forEach((ln, i) => { if (ln) pg.drawText(ln, { x: M, y: y - 14 - i * 18, size: 14, font }); });
     y -= 16 + headLines.length * 18;
     pg.drawText(c === 'all' ? 'The whole answer was moved here because it did not fit its box.'
       : 'The end of this answer was moved here because it did not fit its box.', { x: M, y, size: 9, font, color: grey });

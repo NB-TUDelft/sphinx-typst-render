@@ -124,7 +124,8 @@ export function attachHints(pageNumber) {
         el.style.fontSize = scaled(f.start);            // always the box's own size; shrinking is an export choice
         const m = measure(f, font, text);
         if (!f.multi) {
-          const own = +(el.dataset.lbOwnMax ??= String(el.maxLength > 0 ? el.maxLength : Infinity));
+          if (el.dataset.lbOwnMax === undefined) el.dataset.lbOwnMax = String(el.maxLength > 0 ? el.maxLength : Infinity);
+          const own = +el.dataset.lbOwnMax;
           el.maxLength = Math.min(own, text.length + Math.max(0, m.left));
         }
         // yellow mark on the part that moves

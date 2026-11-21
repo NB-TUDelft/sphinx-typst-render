@@ -159,7 +159,7 @@ class Viewer {
       delete document.body.dataset.printing;
       container.replaceChildren();
       pageSize.remove();
-      urls.forEach(u => URL.revokeObjectURL(u));
+      urls.forEach(u => { URL.revokeObjectURL(u); });
       this.#printing = false;
     };
     try {
