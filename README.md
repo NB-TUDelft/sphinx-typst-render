@@ -200,6 +200,31 @@ the page text, and the PDF's `LogbookFields` metadata holds every answer as JSON
 origin, so books on one origin (say `<org>.github.io`) that use the same
 `storage` name share them.
 
+## An overview page
+
+`typst-overview` puts every document the `typst` directive offers in the book
+on one page: a card per block, in reading order, grouped under the page one
+level up in the table of contents (each week's page, say). The whole card
+opens the block's first menu entry, which is the editor when
+`typst_render_open` starts with it, and the editor's Back link then returns to
+the overview. Underneath, a card links to the page the block is on and to the
+block's other entries.
+
+````markdown
+```{typst-overview}
+:highlight: Entry 3.1
+```
+````
+
+| Option | Meaning |
+|---|---|
+| `:highlight:` | Labels of entries to repeat in a box on top, comma separated |
+| `:highlight-title:` | The heading of that box (default `Highlight`) |
+
+The list is filled in once every page has been read, and the overview page is
+rebuilt whenever another page changes, so an incremental build does not leave
+it out of date. Builders other than HTML leave it out.
+
 ## Why SVG previews
 
 With `:inline:`, an SVG preview is line art, so a theme that inverts diagrams for dark mode

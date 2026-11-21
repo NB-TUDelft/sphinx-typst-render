@@ -20,3 +20,85 @@
   padding-top: 0.45rem;
   border-top: 1px solid var(--pst-color-border, #d1d5da);
 }
+
+/* The typst-overview directive: a card per document, grouped by section. */
+.typst-overview {
+  margin: 1rem 0 1.5rem;
+}
+.typst-overview .typst-overview-group {
+  margin: 1.4rem 0 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pst-color-text-muted, #6c757d);
+}
+.typst-overview > .typst-overview-group:first-child,
+.typst-overview-highlight > .typst-overview-group {
+  margin-top: 0;
+}
+.typst-overview .typst-overview-list {
+  display: grid;
+  /* Two columns at the theme's usual text width, one on a phone. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.typst-overview .typst-overview-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--pst-color-border, #d1d5da);
+  border-radius: 0.6rem;
+  background: var(--pst-color-surface, transparent);
+  transition: border-color 0.15s, transform 0.15s;
+}
+.typst-overview .typst-overview-item:hover,
+.typst-overview .typst-overview-item:focus-within {
+  border-color: var(--pst-color-primary, #0a7d91);
+  transform: translateY(-1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .typst-overview .typst-overview-item,
+  .typst-overview .typst-overview-item:hover,
+  .typst-overview .typst-overview-item:focus-within {
+    transition: none;
+    transform: none;
+  }
+}
+/* The whole card opens the document; the links underneath stay on top. */
+.typst-overview .typst-overview-open {
+  font-weight: 650;
+  color: var(--pst-color-primary, #0a7d91);
+  text-decoration: none;
+}
+.typst-overview .typst-overview-open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.typst-overview .typst-overview-more {
+  position: relative;
+  z-index: 1;
+  font-size: 0.85rem;
+  color: var(--pst-color-text-muted, #6c757d);
+}
+.typst-overview .typst-overview-more a {
+  color: inherit;
+}
+.typst-overview .typst-overview-more a:hover {
+  color: var(--pst-color-primary, #0a7d91);
+}
+.typst-overview-highlight {
+  margin: 0 0 1rem;
+  padding: 0.9rem 1rem 1rem;
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--pst-color-primary, #0a7d91) 8%, transparent);
+}

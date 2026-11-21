@@ -7,7 +7,7 @@ from pathlib import Path
 
 from sphinx.errors import ExtensionError
 
-from . import _editor
+from . import _editor, _overview
 from ._compile import (
     DEFAULT_MAX_LENGTH,
     RenderRequest,
@@ -25,12 +25,14 @@ from ._downloads import (
     purge_doc,
     uses_editor,
 )
+from ._overview import TypstOverviewDirective
 
 __all__ = [
     "DEFAULT_MAX_LENGTH",
     "RenderRequest",
     "RenderResult",
     "TypstDirective",
+    "TypstOverviewDirective",
     "render",
     "setup",
     "stage_field_library",
@@ -126,11 +128,18 @@ def setup(app):
     app.add_config_value("typst_render_editor", {}, "html", types=(dict,))
 
     app.add_directive("typst", TypstDirective)
+    # Every rendered document on one page, filled in once all pages are read.
+    app.add_directive("typst-overview", TypstOverviewDirective)
+    app.add_node(_overview.overview, **_overview.VISITORS)
 
     app.connect("config-inited", _check_config)
     app.connect("builder-inited", _install_assets)
     app.connect("env-purge-doc", purge_doc)
     app.connect("env-merge-info", merge_info)
+    app.connect("env-purge-doc", _overview.purge_doc)
+    app.connect("env-merge-info", _overview.merge_info)
+    app.connect("env-get-outdated", _overview.outdated)
+    app.connect("doctree-resolved", _overview.resolve)
     # After sphinx-book-theme builds the download group at priority 501.
     app.connect("html-page-context", add_download_buttons, priority=600)
     app.connect("build-finished", copy_downloads)

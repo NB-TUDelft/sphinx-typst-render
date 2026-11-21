@@ -118,6 +118,7 @@ class TypstDirective(SphinxDirective):
                 path=source if kind == "raw" else result.pdf,
                 label=label_for(config, kind, label),
                 kind=kind,
+                title=label,
             )
 
         if not inline:

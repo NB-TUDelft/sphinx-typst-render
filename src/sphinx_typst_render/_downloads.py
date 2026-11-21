@@ -66,11 +66,15 @@ def _store(env) -> dict[str, list[dict]]:
     return getattr(env, ENV_KEY)
 
 
-def register(env, docname: str, *, digest: str, path: Path, label: str, kind: str = "pdf") -> str:
+def register(
+    env, docname: str, *, digest: str, path: Path, label: str, kind: str = "pdf", title: str | None = None
+) -> str:
     """Record one menu entry for ``docname`` and return the file's output URI.
 
-    An editor entry points at the PDF, which is copied like any other, so the
-    editor works even when the PDF itself is not offered in the menu.
+    ``label`` is the menu text; ``title`` is the block's own label, which the
+    overview page shows (the menu text when not given). An editor entry points
+    at the PDF, which is copied like any other, so the editor works even when
+    the PDF itself is not offered in the menu.
     """
     uri = f"{URI_PREFIX}/{digest}/{path.name}"
     entries = _store(env).setdefault(docname, [])
@@ -78,8 +82,12 @@ def register(env, docname: str, *, digest: str, path: Path, label: str, kind: st
     for entry in entries:
         if entry["uri"] == uri and entry.get("kind", "pdf") == kind:
             entry["label"] = label
+            entry["title"] = title or label
             return uri
-    entries.append({"uri": uri, "path": str(path), "label": label, "kind": kind, "icon": ICONS[kind]})
+    entries.append({
+        "uri": uri, "path": str(path), "label": label, "kind": kind, "icon": ICONS[kind],
+        "title": title or label, "digest": digest,
+    })
     return uri
 
 
