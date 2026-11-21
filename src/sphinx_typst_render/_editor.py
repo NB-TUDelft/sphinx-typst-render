@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import shutil
+from html import escape
 from pathlib import Path
 from urllib.parse import quote
 
@@ -91,12 +92,41 @@ def settings(config) -> dict[str, object]:
     }
 
 
+def favicon_url(config) -> str | None:
+    """The site's favicon as the editor page links it, or None when it has none.
+
+    Resolved as Sphinx's HTML builder resolves ``html_favicon`` for the
+    book's own pages: a URL is used as it stands, and a file is copied by
+    Sphinx into ``_static/`` under its bare name, which the editor reaches
+    from the output root.
+    """
+    favicon = getattr(config, "html_favicon", None) or ""
+    if not favicon:
+        return None
+    if "://" in favicon:
+        return favicon
+    return f"{TO_ROOT}_static/{quote(Path(favicon).name)}"
+
+
+def _add_favicon(page: Path, config) -> None:
+    """Give the copied editor page the site's favicon, when it has one."""
+    url = favicon_url(config)
+    if url is None:
+        return
+    text = page.read_text(encoding="utf-8")
+    if 'rel="icon"' in text or "</head>" not in text:
+        return
+    link = f'  <link rel="icon" href="{escape(url, quote=True)}">\n'
+    page.write_text(text.replace("</head>", link + "</head>", 1), encoding="utf-8")
+
+
 def install(app) -> Path:
     """Copy the bundle into the HTML output and write the settings beside it."""
     if not available():
         raise ExtensionError(f"sphinx-typst-render: {MISSING}")
     target = Path(app.builder.outdir) / URI_PREFIX
     shutil.copytree(ASSETS, target, dirs_exist_ok=True)
+    _add_favicon(target / "viewer.html", app.config)
     data = json.dumps(settings(app.config), indent=1, ensure_ascii=False)
     (target / "config.js").write_text(f"window.typstEditorConfig = {data};\n", encoding="utf-8")
     return target

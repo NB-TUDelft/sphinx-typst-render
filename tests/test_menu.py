@@ -107,6 +107,31 @@ def test_editor_settings_reach_the_editor_under_its_own_names() -> None:
     assert _editor.settings(_config())["storage"] == "typst-render-editor"
 
 
+def test_favicon_url_mirrors_the_book() -> None:
+    """The editor tab carries the book's favicon, resolved as Sphinx resolves it."""
+    resolve = lambda **overrides: _editor.favicon_url(_config(**overrides))
+    assert resolve() is None
+    assert resolve(html_favicon="images/book icon.png") == "../../_static/book%20icon.png"
+    assert resolve(html_favicon="favicon.ico") == "../../_static/favicon.ico"
+    assert resolve(html_favicon="https://example.com/icon.ico") == "https://example.com/icon.ico"
+
+
+@editor_built
+def test_install_gives_the_editor_page_the_books_favicon(tmp_path: Path) -> None:
+    def installed_page(**overrides) -> str:
+        app = SimpleNamespace(
+            builder=SimpleNamespace(outdir=str(tmp_path)),
+            config=_config(**overrides),
+        )
+        return (_editor.install(app) / "viewer.html").read_text(encoding="utf-8")
+
+    assert '<link rel="icon" href="../../_static/logo.svg">' in installed_page(
+        html_favicon="_static/logo.svg")
+    assert 'href="https://example.com/i.ico?a=1&amp;b=2"' in installed_page(
+        html_favicon="https://example.com/i.ico?a=1&b=2")
+    assert 'rel="icon"' not in installed_page()
+
+
 @editor_built
 def test_install_copies_the_bundle_and_writes_the_settings(tmp_path: Path) -> None:
     app = SimpleNamespace(
