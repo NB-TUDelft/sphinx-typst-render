@@ -46,8 +46,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # The editor bundle is built here rather than committed (see RELEASING.md).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: editor/package-lock.json
+
       - uses: PlohnenSoftware/PyPI-Anaconda-Publish@v2
         with:
+          prepare: cd editor && npm ci && npm run check
           test: pytest
           python_versions: auto
           version_module: src/sphinx_typst_render/__init__.py
@@ -65,8 +73,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # The editor bundle is built here rather than committed (see RELEASING.md).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: editor/package-lock.json
+
       - uses: PlohnenSoftware/PyPI-Anaconda-Publish@v2
         with:
+          prepare: cd editor && npm ci && npm run check
           test: pytest
           python_versions: auto
           version_module: src/sphinx_typst_render/__init__.py

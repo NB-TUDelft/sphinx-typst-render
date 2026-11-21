@@ -1,0 +1,26 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- The editor page. build.mjs copies it beside the bundle and replaces __VERSION__. -->
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="google" content="notranslate">
+  <title>Editor</title>
+  <link rel="stylesheet" href="pdfjs/pdf_viewer.css?v=__VERSION__">
+  <link rel="stylesheet" href="editor.css?v=__VERSION__">
+  <!-- The site's settings, written by sphinx-typst-render beside this page. -->
+  <script src="config.js?v=__VERSION__"></script>
+  <script type="module" src="editor.js?v=__VERSION__"></script>
+</head>
+<body class="lb-custom">
+  <div id="outerContainer">
+    <div id="loadingBar" class="hidden"><div class="progress"><div class="glimmer"></div></div></div>
+    <!-- pdf.js's PDFViewer: an absolutely positioned container around the page list. -->
+    <div id="viewerContainer" tabindex="0">
+      <div id="viewer" class="pdfViewer"></div>
+    </div>
+  </div>
+  <div id="printContainer"></div>
+</body>
+</html>

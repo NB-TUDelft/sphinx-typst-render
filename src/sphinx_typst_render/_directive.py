@@ -9,8 +9,9 @@ from docutils.parsers.rst import directives
 from sphinx import addnodes
 from sphinx.util.docutils import SphinxDirective
 
+from . import _editor
 from ._compile import RenderRequest, render, stage_field_library
-from ._downloads import register
+from ._downloads import default_kinds, label_for, parse_kinds, register
 
 
 def _preview(argument: str) -> str:
@@ -33,7 +34,11 @@ class TypstDirective(SphinxDirective):
         ```{typst} worksheets/week3.typ
         :label: Week 3 worksheet
         :fillable:
+        :open: pdf, editor
         ```
+
+    ``:open:`` picks the menu entries (``pdf``, ``raw``, ``editor``), overriding
+    ``typst_render_open`` for this block.
     """
 
     required_arguments = 1
@@ -45,6 +50,7 @@ class TypstDirective(SphinxDirective):
         "fillable": directives.flag,
         "inline": directives.flag,
         "source": _yes_no,
+        "open": directives.unchanged,
         "label": directives.unchanged,
         "alt": directives.unchanged,
         "height": directives.length_or_unitless,
@@ -104,25 +110,14 @@ class TypstDirective(SphinxDirective):
 
         label = self.options.get("label") or result.pdf.stem
         digest = result.pdf.parent.name
-        register(
-            self.env,
-            self.env.docname,
-            digest=digest,
-            path=result.pdf,
-            label=label,
-        )
-
-        want_source = self.options.get(
-            "source", "yes" if config.typst_render_link_source else "no"
-        )
-        if want_source == "yes":
+        for kind in self._kinds(config):
             register(
                 self.env,
                 self.env.docname,
                 digest=digest,
-                path=source,
-                label=f"{label} (source)",
-                icon="fas fa-file-code",
+                path=source if kind == "raw" else result.pdf,
+                label=label_for(config, kind, label),
+                kind=kind,
             )
 
         if not inline:
@@ -152,3 +147,21 @@ class TypstDirective(SphinxDirective):
         reference += nodes.literal(label, label, classes=["xref", "download"])
         container += nodes.paragraph("", "", reference, classes=["typst-download"])
         return [container]
+
+    def _kinds(self, config) -> list[str]:
+        """What this block offers in the menu, in menu order."""
+        try:
+            if "open" in self.options:
+                kinds = parse_kinds(self.options["open"], ":open:")
+            else:
+                kinds = default_kinds(config)
+        except ValueError as error:
+            raise self.error(str(error)) from error
+        # :source: predates :open: and still adds or drops the source link.
+        if self.options.get("source") == "yes" and "raw" not in kinds:
+            kinds.append("raw")
+        elif self.options.get("source") == "no":
+            kinds = [kind for kind in kinds if kind != "raw"]
+        if "editor" in kinds and not _editor.available():
+            raise self.error(_editor.MISSING)
+        return kinds

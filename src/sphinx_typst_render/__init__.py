@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from sphinx.errors import ExtensionError
+
+from . import _editor
 from ._compile import (
     DEFAULT_MAX_LENGTH,
     RenderRequest,
@@ -14,10 +17,13 @@ from ._compile import (
 )
 from ._directive import TypstDirective
 from ._downloads import (
+    KINDS,
     add_download_buttons,
     copy_downloads,
+    default_kinds,
     merge_info,
     purge_doc,
+    uses_editor,
 )
 
 __all__ = [
@@ -69,6 +75,31 @@ def _install_assets(app) -> None:
     app.add_css_file("typst-render.css")
 
 
+def _check_config(app, config) -> None:
+    """Fail when the build starts, not halfway through it."""
+    try:
+        kinds = default_kinds(config)
+    except ValueError as error:
+        raise ExtensionError(f"sphinx-typst-render: {error}") from error
+    unknown = sorted(set(config.typst_render_open_labels or {}) - set(KINDS))
+    if unknown:
+        raise ExtensionError(
+            f"sphinx-typst-render: typst_render_open_labels: unknown {', '.join(unknown)}; "
+            f"choose from {', '.join(KINDS)}"
+        )
+    if "editor" in kinds and not _editor.available():
+        raise ExtensionError(f"sphinx-typst-render: {_editor.MISSING}")
+    _editor.settings(config)
+
+
+def _install_editor(app, exception) -> None:
+    """Ship the editor with the HTML, when any page offers it."""
+    if exception is not None or getattr(app.builder, "format", None) != "html":
+        return
+    if uses_editor(app.env):
+        _editor.install(app)
+
+
 def setup(app):
     app.add_config_value("typst_render_preview", "svg", "env")
     app.add_config_value("typst_render_ppi", 144.0, "env")
@@ -83,15 +114,27 @@ def setup(app):
     app.add_config_value("typst_render_link_source", False, "env")
     app.add_config_value("typst_render_source_label", "Source", "html")
     app.add_config_value("typst_render_downloads_label", "Worksheets", "html")
+    # What each rendered document offers in the download menu, in menu order:
+    # "pdf" (the compiled PDF), "raw" (the .typ source) and "editor" (the PDF
+    # opened in the in-browser editor). None keeps the old behaviour: the PDF,
+    # plus the source when typst_render_link_source is set.
+    app.add_config_value("typst_render_open", None, "env", types=(list, tuple, str, type(None)))
+    # Menu text per kind, a format string over the block's label, e.g.
+    # {"editor": "{label}", "pdf": "{label} (printable)"}.
+    app.add_config_value("typst_render_open_labels", {}, "env", types=(dict,))
+    # The editor's settings; see _editor.DEFAULTS.
+    app.add_config_value("typst_render_editor", {}, "html", types=(dict,))
 
     app.add_directive("typst", TypstDirective)
 
+    app.connect("config-inited", _check_config)
     app.connect("builder-inited", _install_assets)
     app.connect("env-purge-doc", purge_doc)
     app.connect("env-merge-info", merge_info)
     # After sphinx-book-theme builds the download group at priority 501.
     app.connect("html-page-context", add_download_buttons, priority=600)
     app.connect("build-finished", copy_downloads)
+    app.connect("build-finished", _install_editor)
 
     return {
         "version": __version__,

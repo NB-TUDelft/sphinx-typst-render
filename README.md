@@ -2,7 +2,9 @@
 
 Compile [Typst](https://typst.app) sources during a Sphinx or Jupyter Book
 build. Each source becomes a PDF students can download, plus an optional inline
-preview image that follows the page theme.
+preview image that follows the page theme. A fillable PDF can also open in a
+built-in editor, where students fill it in, draw, add pictures and export the
+result to hand in.
 
 Typst ships inside the [`typst`](https://pypi.org/project/typst/) wheel as a
 statically linked extension module, so there is no `typst` CLI to install and no
@@ -57,6 +59,8 @@ Pass `:inline:` to also show a preview image and a download link in the body.
 | `:class:` | none | Extra CSS classes on the wrapper. |
 | `:inline:` | off | Also show a preview and link in the page body. |
 | `:fillable:` | off | Add interactive form fields. See below. |
+| `:open:` | from config | Menu entries for this block, e.g. `pdf, editor`. See below. |
+| `:source:` | from config | `yes` or `no`: add or drop the `.typ` source entry. |
 | `:max-length:` | from config | Characters a text field accepts. `0` strips the limit. |
 
 ### Configuration
@@ -69,6 +73,10 @@ Pass `:inline:` to also show a preview image and a download link in the body.
 | `typst_render_source_label` | `"Source"` | Heading above the page's own downloads. |
 | `typst_render_downloads_label` | `"Worksheets"` | Heading above the rendered PDFs. |
 | `typst_render_field_max_length` | `10000` | Characters a text field accepts. `0` strips the limit. |
+| `typst_render_link_source` | `False` | Also offer the `.typ` source, when `typst_render_open` is unset. |
+| `typst_render_open` | unset | Menu entries for every block, in order: any of `pdf`, `raw`, `editor`. |
+| `typst_render_open_labels` | `{}` | Menu text per entry, e.g. `{"editor": "{label}"}`. |
+| `typst_render_editor` | `{}` | Settings for the editor. See below. |
 
 ## The download menu
 
@@ -104,6 +112,93 @@ non-link entry cannot be expressed through the `header_buttons` context.
 Without a theme that provides such a menu, the PDFs are still written and
 copied, and a warning names the page whose downloads are unreachable. Use
 `:inline:` in that case.
+
+## Choosing what the menu offers
+
+Each block can offer three entries in the download menu:
+
+| Entry | Opens |
+| --- | --- |
+| `pdf` | the compiled PDF |
+| `raw` | the `.typ` source |
+| `editor` | the PDF in the editor, where students fill it in |
+
+Pick them for the whole book, in menu order, and change their text per entry.
+`{label}` stands for the block's `:label:`:
+
+```yaml
+sphinx:
+  config:
+    typst_render_open: [editor, raw, pdf]
+    typst_render_open_labels:
+      editor: "{label}"
+      pdf: "{label} (printable)"
+```
+
+A single block can choose its own with `:open: pdf, editor`. Without
+`typst_render_open` nothing changes: the PDF, plus the source when
+`typst_render_link_source` is set or the block says `:source: yes`.
+
+## The editor
+
+The `editor` entry opens the PDF in a page built on [pdf.js](https://mozilla.github.io/pdf.js/)
+that ships inside this package. It is copied to `_static/typst-editor/` (about
+6 MB) only when some page offers it. Students type into the form fields, draw,
+insert pictures, add text and image pages at the end, print, and export a PDF to
+hand in. Their work saves itself in the browser as they go, and the editor offers
+to restore it next time. The menu also downloads an editable copy, for moving to
+another computer, and leads back to the page that opened the editor.
+
+It works on any fillable PDF, and two conventions in the Typst source add to it:
+
+- **Image boxes.** A text field named `img_<name>` becomes a box students put a
+  picture in, fitted to the box:
+
+  ```typ
+  #import "/_typst_lib/capture_field.typ": capture_field
+  #let image_box(name, height: 150pt) = capture_field(
+    field_name: "img_" + name, field_type: "text", fill_cell: true, min_height: height,
+  )[#box(width: 100%, height: height, stroke: 0.5pt + gray)]
+  ```
+
+- **Sections.** Every bookmarked heading is a section, and an inserted picture or
+  an added page is tagged with the section it belongs to. Typst bookmarks headings
+  by default, and fillable PDFs keep those bookmarks. A section can be named
+  without printing anything: `#place(hide(heading(bookmarked: true)[Tasks A1 to A3]))`.
+
+Settings, all optional:
+
+```yaml
+sphinx:
+  config:
+    typst_render_editor:
+      storage: nb2420-logbooks
+      key_pattern: '^(\d+\.\d+)(?=[_ ]|$)'
+      label_prefix: NB2420
+      noun: logbook
+      brand: NB2420
+      export_message: Exported. Hand in this PDF on Brightspace.
+```
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `storage` | `typst-render-editor` | Name of the browser storage that holds the saves. Use one per site. |
+| `key_pattern` | unset | JavaScript regular expression for the save key: its first group, or the whole match, taken from the PDF's file stem. Unset, the stem is the key. With a key like `1.1`, a renamed file keeps its students' work. |
+| `aliases` | `{}` | Old key or stem to new key, for documents that were renumbered or merged. |
+| `label_prefix` | `FORM` | Prefix of the labels in exports, see below. |
+| `noun`, `noun_plural` | `worksheet`, noun + s | What the editor calls the documents in its messages. |
+| `brand` | none | Short mark before the title in the toolbar, e.g. a course code. |
+| `export_message` | a neutral line | Shown after an export. |
+
+**Exports.** The exported PDF has no form fields left: every answer, drawing and
+picture is painted onto the page, so any reader shows the same thing. Code can
+still read it back. Each answer sits between invisible
+`[[<label_prefix>:field name="..."]]` and `[[/<label_prefix>:field]]` labels in
+the page text, and the PDF's `LogbookFields` metadata holds every answer as JSON.
+
+**Saves** stay in the browser of the computer used. Browsers keep them per site
+origin, so books on one origin (say `<org>.github.io`) that use the same
+`storage` name share them.
 
 ## Why SVG previews
 
@@ -196,6 +291,27 @@ Add the generated artefacts to `.gitignore`:
 Commit the PDFs if you want the book to build without recompiling, or ignore
 them too and let CI regenerate them.
 
+## Developing the editor
+
+The editor's source is in `editor/` and builds with npm into
+`src/sphinx_typst_render/_editor/`, which git ignores:
+
+```bash
+cd editor
+npm ci
+npm run check    # lint, then build
+```
+
+Everything comes from npm. `src/viewer.js` assembles the viewer from pdf.js's
+own components (`PDFViewer`, `EventBus`, `PDFLinkService`, `DownloadManager`,
+`ProgressBar`) the way pdf.js's stock viewer app wires them; the other modules in
+`src/` add the editing. The release workflow runs the build before packaging, so
+every wheel and sdist carries it (see RELEASING.md).
+
 ## Licence
 
 GNU Affero General Public License v3.0 or later, see [LICENSE](LICENSE).
+
+The editor bundle includes pdf.js (Apache 2.0), pdf-lib and fontkit (MIT),
+pako (MIT and Zlib), tslib (0BSD) and the Inter font (OFL 1.1). Their licences
+are in `_editor/THIRD_PARTY_LICENSES.txt` and beside pdf.js's data files.

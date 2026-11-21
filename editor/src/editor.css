@@ -1,0 +1,270 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Fill-in editor for the pdf.js viewer (sphinx-typst-render). Our own bar replaces the pdf.js toolbar and sidebar,
+   with one fixed look in every browser and OS theme. */
+@font-face {
+  font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url("fonts/inter-latin-wght.woff2") format("woff2"); /* SIL OFL, see fonts/Inter-OFL.txt */
+}
+:root {
+  --lb-font: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  --lb-ink: #16181d;
+  --lb-muted: #5f6672;
+  --lb-line: #e3e6eb;
+  --lb-chip: #f2f4f7;
+  --lb-chip-hover: #e7eaef;
+  --lb-accent: #00a6d6;      /* TU Delft cyan */
+  --lb-accent-ink: #00799c;
+  --lb-navy: #0c2340;        /* TU Delft dark blue */
+  --lb-navy-hover: #183a63;
+  --lb-danger: #c8321e;
+  --lb-canvas: #e9ecf1;
+  --lb-radius: 10px;
+  color-scheme: light;
+}
+
+/* ------------------------------------------------------------- page layout */
+html, body { height: 100%; margin: 0; }
+body.lb-custom { background: var(--lb-canvas); overflow: hidden; }
+#outerContainer { position: relative; width: 100%; height: 100%; }
+/* pdf.js's PDFViewer needs an absolutely positioned scroll container. The
+   toolbar sets --toolbar-height to its own height (see buildBar). */
+#viewerContainer { position: absolute; inset: var(--toolbar-height, 56px) 0 0 0; overflow: auto; outline: none; background: var(--lb-canvas); }
+body.lb-custom .pdfViewer { --page-margin: 20px auto; padding-bottom: 40px; }
+body.lb-custom .pdfViewer .page {
+  border: 0 !important; border-image: none !important; border-radius: 3px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .08), 0 8px 28px rgba(16, 24, 40, .10);
+}
+/* pdf.js's ProgressBar while a document loads: a thin line under the toolbar. */
+#loadingBar { --progressBar-percent: 0%; position: absolute; z-index: 8800; inset: var(--toolbar-height, 56px) 0 auto 0; height: 3px; overflow: hidden; }
+#loadingBar.hidden { display: none; }
+#loadingBar .progress { width: 100%; height: 100%; background: var(--lb-accent); transform: scaleX(var(--progressBar-percent)); transform-origin: 0 0; transition: transform .2s; }
+#loadingBar.indeterminate .progress { transform: none; background: linear-gradient(90deg, transparent, var(--lb-accent), transparent) no-repeat; background-size: 40% 100%; animation: lb-loading 1.2s linear infinite; }
+@keyframes lb-loading { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+#loadingBar .glimmer { display: none; }
+
+#lbBar {
+  position: fixed; inset: 0 0 auto 0; z-index: 9000;
+  background: rgba(255, 255, 255, .96); backdrop-filter: saturate(1.4) blur(8px);
+  border-bottom: 1px solid var(--lb-line);
+  box-shadow: 0 1px 0 rgba(16, 24, 40, .02), 0 2px 12px rgba(16, 24, 40, .04);
+  font: 500 13px/1 var(--lb-font); color: var(--lb-ink);
+  -webkit-font-smoothing: antialiased;
+}
+#lbBar * { box-sizing: border-box; font-family: inherit; }
+.lb-row { display: flex; align-items: center; gap: 10px; padding: 9px 14px; flex-wrap: nowrap; min-height: 56px; }
+@media (max-width: 720px) { .lb-row { flex-wrap: wrap; } }
+
+.lb-title { display: flex; align-items: center; gap: 8px; min-width: 0; margin-right: 4px; }
+.lb-mark { font-weight: 700; font-size: 12px; letter-spacing: .04em; color: #fff; background: var(--lb-navy); padding: 5px 7px; border-radius: 6px; align-self: center; }
+.lb-name { font-weight: 600; font-size: 14px; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 24ch; text-transform: none; }
+.lb-name::first-letter { text-transform: uppercase; }
+
+.lb-group { display: flex; align-items: center; gap: 2px; padding: 3px; background: var(--lb-chip); border-radius: var(--lb-radius); }
+.lb-group[hidden], .lb-tb[hidden] { display: none !important; }
+
+.lb-tb {
+  all: unset; box-sizing: border-box; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 32px; min-width: 32px; padding: 0 9px; border-radius: 8px;
+  color: var(--lb-ink); font: 500 13px/1 var(--lb-font); white-space: nowrap;
+  transition: background .12s, color .12s, box-shadow .12s;
+}
+.lb-tb svg { width: 18px; height: 18px; flex: none; }
+.lb-tb:hover { background: var(--lb-chip-hover); }
+.lb-tb:focus-visible, .lb-swatch:focus-visible, .lb-size:focus-visible, .lb-btn:focus-visible, .lb-menu-item:focus-visible, .lb-page-input:focus-visible {
+  outline: 2px solid var(--lb-accent); outline-offset: 1px;
+}
+.lb-tb:disabled { opacity: .4; cursor: default; }
+.lb-tool.lb-on, .lb-side-btn.lb-on { background: #fff; color: var(--lb-accent-ink); box-shadow: 0 1px 2px rgba(16, 24, 40, .12), 0 0 0 1px rgba(0, 166, 214, .25); }
+.lb-zoom-btn { min-width: 52px; font-variant-numeric: tabular-nums; color: var(--lb-muted); }
+.lb-danger-ghost { color: var(--lb-danger); }
+.lb-danger-ghost:hover { background: #fdecea; }
+
+.lb-page-input {
+  all: unset; box-sizing: border-box; width: 38px; height: 28px; text-align: center;
+  background: #fff; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--lb-line);
+  font: 600 13px/28px var(--lb-font); color: var(--lb-ink); font-variant-numeric: tabular-nums;
+}
+.lb-page-count { color: var(--lb-muted); padding: 0 6px 0 4px; font-variant-numeric: tabular-nums; }
+
+.lb-tools-wrap { position: relative; display: flex; }
+.lb-style { gap: 4px; padding: 6px 8px; position: absolute; top: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+  background: #fff; border-radius: 12px; box-shadow: 0 0 0 1px var(--lb-line), 0 10px 28px rgba(16, 24, 40, .14); white-space: nowrap; }
+.lb-swatch { all: unset; cursor: pointer; width: 20px; height: 20px; border-radius: 50%; background: var(--sw); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+.lb-swatch.lb-on { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--lb-accent); }
+.lb-style-sep { width: 1px; height: 18px; background: var(--lb-line); margin: 0 4px; }
+.lb-size { all: unset; cursor: pointer; min-width: 24px; height: 24px; border-radius: 6px; text-align: center; font: 600 12px/24px var(--lb-font); color: var(--lb-muted); }
+.lb-size:hover { background: var(--lb-chip-hover); }
+.lb-size.lb-on { background: #fff; color: var(--lb-accent-ink); box-shadow: 0 1px 2px rgba(16, 24, 40, .12); }
+
+.lb-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.lb-status { color: var(--lb-muted); font-size: 12px; white-space: nowrap; }
+.lb-status[data-tone="ok"]::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #1f9d55; margin-right: 6px; vertical-align: 1px; }
+.lb-status[data-tone="warn"] { color: #a2400f; }
+.lb-export { background: var(--lb-navy); color: #fff; padding: 0 14px 0 12px; height: 36px; font-weight: 600; box-shadow: 0 1px 2px rgba(12, 35, 64, .3); }
+.lb-export:hover { background: var(--lb-navy-hover); }
+
+.lb-menu-wrap { position: relative; }
+.lb-menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 220px; padding: 6px; background: #fff; border-radius: 12px;
+  box-shadow: 0 0 0 1px var(--lb-line), 0 12px 32px rgba(16, 24, 40, .16); z-index: 9100; }
+.lb-menu[hidden] { display: none; }
+.lb-menu-item { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 9px 10px; border-radius: 8px; cursor: pointer; font: 500 13px/1.2 var(--lb-font); color: var(--lb-ink); }
+.lb-menu-item:hover { background: var(--lb-chip); }
+.lb-privacy-menu { min-width: 280px; }
+.lb-menu-note { padding: 8px 10px 6px; font: 400 12px/1.4 var(--lb-font); color: #5b6472; }
+.lb-menu-item.lb-menu-danger { color: #b42318; }
+.lb-menu-item.lb-menu-danger:hover { background: #fdecea; }
+.lb-menu-sep { height: 1px; background: var(--lb-line); margin: 5px 4px; }
+
+body.lb-busy #lbBar .lb-group, body.lb-busy #lbExport, body.lb-busy .lb-slot-bar { pointer-events: none; opacity: .55; }
+body.lb-busy #lbSaveBadge::after { content: ""; display: inline-block; width: 10px; height: 10px; margin-left: 8px; vertical-align: -1px;
+  border: 2px solid var(--lb-line); border-top-color: var(--lb-accent); border-radius: 50%; animation: lb-spin .7s linear infinite; }
+@keyframes lb-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 1440px) { .lb-tool .lb-tb-label { display: none; } }
+@media (max-width: 1200px) { .lb-tb-label { display: none; } .lb-export .lb-tb-label { display: inline; } .lb-status { display: none; } }
+/* never clip: if the bar still does not fit, it wraps (the page offset follows its height) */
+.lb-row { flex-wrap: wrap; }
+/* Set by the bar itself when it would otherwise wrap (see buildBar). */
+#lbBar.lb-c1 .lb-tool .lb-tb-label { display: none; }
+#lbBar.lb-c2 .lb-status { font-size: 0; }
+#lbBar.lb-c3 .lb-group .lb-tb-label { display: none; }
+#lbBar.lb-c4 .lb-name { display: none; }
+@media (max-width: 1080px) { .lb-name { display: none; } .lb-hide-sm { display: none !important; } }
+.lb-title, .lb-group, .lb-right { flex-shrink: 0; }
+.lb-page-count { white-space: nowrap; }
+@media (max-width: 720px) {
+  .lb-hide-sm { display: none !important; }
+  .lb-row { gap: 6px; padding: 6px 8px; }
+  .lb-name { max-width: 14ch; }
+  .lb-right { margin-left: 0; }
+}
+
+/* --------------------------------------------------------------- image slots */
+.lb-slot { position: absolute; z-index: 30; display: flex; align-items: flex-end; justify-content: center; pointer-events: none; }
+.lb-slot:not(.lb-filled) { outline: 2px dashed rgba(0, 166, 214, .55); outline-offset: -2px; border-radius: 4px; align-items: center;
+  background: #f6fbfd; pointer-events: auto; cursor: pointer; }
+.lb-slot:not(.lb-filled):hover { background: #eaf6fb; }
+
+/* Form fields: quiet tint instead of pdf.js's bright blue, an accent ring while typing.
+   The tint must stay see-through: pdf.js paints drawings and dropped images on the
+   page canvas, which sits under the fields, so an opaque fill would hide them. */
+body.lb-custom .annotationLayer :is(.textWidgetAnnotation, .choiceWidgetAnnotation) :is(input, textarea, select) {
+  background-color: rgba(0, 140, 190, .055) !important; background-image: none !important; border: 1px solid #d5e7ef !important; border-radius: 2px;
+  color: var(--lb-ink);
+}
+body.lb-custom .annotationLayer :is(.textWidgetAnnotation, .choiceWidgetAnnotation) :is(input, textarea, select):hover { border-color: rgba(0, 166, 214, .45) !important; }
+body.lb-custom .annotationLayer :is(.textWidgetAnnotation, .choiceWidgetAnnotation) :is(input, textarea, select):focus {
+  background-color: transparent !important; border-color: var(--lb-accent) !important; outline: 0; box-shadow: 0 0 0 3px rgba(0, 166, 214, .18);
+}
+.lb-slot-bar { pointer-events: auto; display: flex; gap: 6px; margin: 8px; transition: opacity .15s; }
+.lb-slot.lb-filled .lb-slot-bar { opacity: 0; }
+/* The filled slot stays click-through so students can draw or comment on the image. */
+.page:hover .lb-slot.lb-filled .lb-slot-bar, .lb-slot-bar:focus-within { opacity: 1; }
+
+/* ------------------------------------------------------------ buttons, cards */
+.lb-btn { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  height: 34px; padding: 0 14px; border-radius: 9px; font: 600 13px/1 var(--lb-font); color: var(--lb-ink);
+  background: #fff; box-shadow: inset 0 0 0 1px #cfd4dc, 0 1px 2px rgba(16, 24, 40, .06); white-space: nowrap; }
+.lb-btn:hover { background: var(--lb-chip); }
+.lb-btn.lb-primary { background: var(--lb-navy); color: #fff; box-shadow: 0 1px 2px rgba(12, 35, 64, .3); }
+.lb-btn.lb-primary:hover { background: var(--lb-navy-hover); }
+.lb-btn.lb-danger { background: var(--lb-danger); }
+.lb-btn.lb-danger:hover { background: #a92814; }
+
+.lb-restore { position: fixed; z-index: 9050; top: calc(var(--lb-bar-h, 56px) + 16px); left: 50%; transform: translateX(-50%);
+  display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; width: min(620px, calc(100vw - 32px));
+  padding: 14px 16px; background: #fff; border-radius: 14px; font: 13px/1.4 var(--lb-font); color: var(--lb-ink);
+  box-shadow: 0 0 0 1px var(--lb-line), 0 16px 40px rgba(16, 24, 40, .18); }
+.lb-restore-text { flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px; }
+.lb-restore-text strong { font-weight: 600; font-size: 14px; }
+.lb-restore-text span { color: var(--lb-muted); }
+
+.lb-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--lb-ink); color: #fff;
+  padding: 11px 16px; border-radius: 10px; font: 500 13px/1.4 var(--lb-font); z-index: 100000; max-width: calc(100vw - 32px);
+  box-shadow: 0 10px 30px rgba(16, 24, 40, .3); }
+
+.lb-modal-backdrop { position: fixed; inset: 0; background: rgba(12, 20, 33, .42); display: flex; align-items: center; justify-content: center; z-index: 100000; padding: 16px; }
+.lb-modal { background: #fff; color: var(--lb-ink); border-radius: 16px; padding: 22px 22px 18px; width: min(460px, 100%);
+  box-shadow: 0 24px 64px rgba(16, 24, 40, .3); font: 14px/1.45 var(--lb-font); }
+.lb-modal h2 { margin: 0 0 8px; font-size: 17px; font-weight: 650; }
+.lb-modal-text { margin: 0 0 14px; color: var(--lb-muted); }
+.lb-field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px; }
+.lb-field + .lb-field { margin-top: 14px; }
+/* Image page layout picker: hover to preview, click to choose (like Word's table grid). */
+.lb-grid-wrap { display: flex; align-items: flex-end; gap: 14px; }
+.lb-grid { display: grid; grid-template-columns: repeat(3, 26px); grid-auto-rows: 20px; gap: 3px; }
+.lb-grid-cell { all: unset; box-sizing: border-box; cursor: pointer; border: 1px solid var(--lb-line); border-radius: 3px; background: #fff; }
+.lb-grid-cell.lb-on { background: #d9f0f8; border-color: var(--lb-accent); }
+.lb-grid-cell.lb-chosen { box-shadow: inset 0 0 0 2px var(--lb-accent); }
+.lb-grid-cell:focus-visible { outline: 2px solid var(--lb-accent); outline-offset: 1px; }
+.lb-grid-label { font-weight: 500; color: var(--lb-muted); font-variant-numeric: tabular-nums; }
+.lb-select { appearance: none; -webkit-appearance: none; font: 500 14px var(--lb-font); color: var(--lb-ink); padding: 9px 36px 9px 12px; border-radius: 9px;
+  border: 0; box-shadow: inset 0 0 0 1px #cfd4dc; max-width: 100%;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M6 8l4 4 4-4' fill='none' stroke='%235f6672' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 10px center / 18px; }
+.lb-select:focus-visible { outline: 2px solid var(--lb-accent); outline-offset: 1px; }
+.lb-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.lb-hidden-input { position: fixed; left: -9999px; }
+.lb-modal:has(.lb-overflow-table) { width: min(760px, 100%); }
+.lb-overflow-table { display: flex; flex-direction: column; gap: 8px; max-height: min(55vh, 440px); overflow-y: auto; padding: 2px; }
+.lb-ov-head, .lb-ov-row { display: grid; grid-template-columns: 1.35fr 1fr 1fr 1fr; gap: 8px; align-items: center; }
+.lb-ov-head { font: 650 12px/1.2 var(--lb-font); color: var(--lb-muted); padding: 0 4px 4px; border-bottom: 1px solid var(--lb-line); text-align: center; }
+.lb-ov-head span:first-child { text-align: left; }
+.lb-ov-row { padding: 8px 6px; border-radius: 10px; background: #f8fafc; box-shadow: inset 0 0 0 1px #e2e8f0; }
+.lb-ov-q { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lb-ov-q strong { font-size: 13px; color: var(--lb-ink); overflow-wrap: anywhere; }
+.lb-ov-q span { font-size: 11px; color: var(--lb-muted); }
+.lb-ov-btn { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  min-height: 36px; padding: 6px 10px; border-radius: 9px; font: 600 12px/1.2 var(--lb-font); text-align: center;
+  background: #fff; color: var(--lb-ink); box-shadow: inset 0 0 0 1.5px #cbd5e1; transition: all .12s; }
+.lb-ov-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: inset 0 0 0 1.5px #94a3b8; }
+.lb-ov-overflow.lb-on { background: #1f5fd1; color: #fff; box-shadow: 0 2px 6px rgba(31, 95, 209, .35); }
+.lb-ov-all.lb-on { background: #7c3aed; color: #fff; box-shadow: 0 2px 6px rgba(124, 58, 237, .35); }
+.lb-ov-shrink.lb-on { background: #178a4c; color: #fff; box-shadow: 0 2px 6px rgba(23, 138, 76, .35); }
+.lb-ov-btn:disabled { opacity: .45; cursor: not-allowed; background: #f1f5f9; color: #64748b; }
+
+/* Live hints next to a text box: characters left, and text that will move on export. */
+/* Sized with the page zoom (--total-scale-factor is 1.33 at 100%), within readable limits. */
+.lb-hint { position: absolute; z-index: 30; pointer-events: none; border-radius: 7px;
+  max-width: clamp(240px, calc(255px * var(--total-scale-factor)), 520px);
+  padding: clamp(3px, calc(3px * var(--total-scale-factor)), 6px) clamp(6px, calc(6px * var(--total-scale-factor)), 12px);
+  font: 500 clamp(11px, calc(9px * var(--total-scale-factor)), 20px)/1.35 var(--lb-font); color: #fff; background: var(--lb-ink); box-shadow: 0 4px 14px rgba(16, 24, 40, .25); }
+.lb-hint.lb-warn { background: #8a5a00; }
+.lb-mirror { position: absolute; inset: 0; overflow: hidden; pointer-events: none; color: transparent; white-space: pre-wrap; overflow-wrap: break-word; }
+.lb-mirror mark { background: rgba(255, 214, 0, .6); color: transparent; border-radius: 2px; }
+
+/* pdf.js pops up an inserted image's label ("Image for: ...") on hover; the
+   label stays in the PDF, the popup is just noise on screen. */
+body.lb-custom .annotationLayer .popupAnnotation { display: none !important; }
+
+/* ------------------------------------------------------------ page sidebar */
+:root { --lb-side-w: 176px; }
+#lbSide { position: fixed; top: var(--lb-bar-h, 56px); bottom: 0; left: 0; width: var(--lb-side-w); z-index: 8500;
+  background: #fff; border-right: 1px solid var(--lb-line); overflow-y: auto; padding: 14px 0 24px;
+  transform: translateX(-100%); visibility: hidden; transition: transform .15s ease, visibility .15s; }
+body.lb-side-open #lbSide { transform: none; visibility: visible; }
+@media (min-width: 700px) { body.lb-custom.lb-side-open #viewerContainer { inset-inline-start: var(--lb-side-w) !important; } }
+@media (max-width: 699px) { #lbSide { box-shadow: 0 12px 32px rgba(16, 24, 40, .2); } }
+.lb-side-list { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.lb-thumb { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.lb-thumb-canvas { width: 128px; height: auto; background: #fff; border-radius: 2px; box-shadow: 0 0 0 1px var(--lb-line), 0 1px 3px rgba(16, 24, 40, .08); }
+.lb-thumb:hover .lb-thumb-canvas { box-shadow: 0 0 0 1px #c5cbd3, 0 2px 6px rgba(16, 24, 40, .12); }
+.lb-thumb.lb-current .lb-thumb-canvas { box-shadow: 0 0 0 2px var(--lb-accent); }
+.lb-thumb:focus-visible .lb-thumb-canvas { outline: 2px solid var(--lb-accent); outline-offset: 3px; }
+.lb-thumb-num { font: 500 12px/1 var(--lb-font); color: var(--lb-muted); font-variant-numeric: tabular-nums; }
+.lb-thumb.lb-current .lb-thumb-num { color: var(--lb-accent-ink); font-weight: 650; }
+
+/* ------------------------------------------------------------------ printing */
+/* Only the pages viewer.js rendered for print, as in pdf.js's print service. */
+#printContainer { display: none; }
+@media print {
+  #lbSide, #lbBar, .lb-slot, .lb-restore, .lb-toast, .lb-hint, .lb-mirror { display: none !important; }
+  html, body, body.lb-custom { height: auto; overflow: visible; background: none; }
+  #outerContainer { display: none; }
+  body[data-printing] #printContainer { display: block; }
+  #printContainer > .printedPage { break-after: page; break-inside: avoid; height: 100vh; display: flex; align-items: center; justify-content: center; }
+  #printContainer > .printedPage:last-child { break-after: auto; }
+  #printContainer img { display: block; max-width: 100%; max-height: 100%; }
+  /* A print from the browser's own menu cannot wait for that rendering. */
+  body:not([data-printing])::after { content: "To print, use Print in the editor's menu, or Ctrl+P."; display: block; padding: 2cm; font: 14pt/1.4 var(--lb-font); }
+}
