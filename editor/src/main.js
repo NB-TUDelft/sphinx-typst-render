@@ -28,7 +28,7 @@ import { flattenedBytes, exportPdf } from './export.js';
 import { buildBar, syncMode, syncPage, syncZoom, syncTitle, updateDeleteButton } from './toolbar.js';
 import { fillSidebar, markCurrent } from './sidebar.js';
 import { decoratePage } from './slots.js';
-import { onZoom, attachHints } from './hints.js';
+import { onZoom, attachHints, keepFocusThroughZoom, MAX_ZOOM } from './hints.js';
 
 setInterval(autosaveNow, AUTOSAVE_MS);
 
@@ -84,7 +84,11 @@ window.addEventListener('keydown', e => {
 }, true);
 
 const bus = app().eventBus;
-bus.on('scalechanging', () => { syncZoom(); onZoom(); });
+bus.on('scalechanging', ({ scale }) => {
+  if (scale > MAX_ZOOM + 1e-6) { app().pdfViewer.currentScale = MAX_ZOOM; return; }   // pdf.js itself goes to 1000 %
+  keepFocusThroughZoom();
+  syncZoom(); onZoom();
+});
 bus.on('pagesloaded', () => { syncPage(); syncZoom(); });
 bus.on('annotationeditormodechanged', ({ mode }) => syncMode(mode));
 bus.on('documentloaded', () => onDocumentLoaded().catch(err => {

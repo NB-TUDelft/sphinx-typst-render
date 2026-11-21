@@ -21,6 +21,46 @@ async function liveFont() {
   measurer.avg = size => measurer.widthOfTextAtSize('etaoinshrdlucmfwyp ', size) / 19;
   return measurer;
 }
+// pdf.js hides the form layer for a moment while it redraws at a new zoom,
+// which takes the cursor out of the box being typed in. Put it back, with
+// the same selection, once the box is shown again (unless the student has
+// clicked somewhere else by then). Its hint then comes back with it.
+export const MAX_ZOOM = 4;
+// Watched until the student clicks or types somewhere else (or 10 s pass):
+// pdf.js can redraw, and drop the cursor, a while after the zoom itself.
+let zoomFocus = null;
+export function keepFocusThroughZoom() {
+  const el = document.activeElement;
+  if (el && el.closest && el.closest('.annotationLayer') && 'selectionStart' in el)
+    zoomFocus = { el, start: el.selectionStart, end: el.selectionEnd, scroll: el.scrollTop };
+  if (!zoomFocus) return;
+  const z = zoomFocus, running = !!z.until;
+  z.until = performance.now() + 10000;
+  if (running) return;
+  const elsewhere = e => { if (!z.el.contains(e.target) && !e.ctrlKey && !e.metaKey && e.key !== 'Control') stop(); };
+  const stop = () => {
+    if (zoomFocus === z) zoomFocus = null;
+    document.removeEventListener('pointerdown', elsewhere, true);
+    document.removeEventListener('keydown', elsewhere, true);
+  };
+  document.addEventListener('pointerdown', elsewhere, true);
+  document.addEventListener('keydown', elsewhere, true);
+  const watch = () => {
+    if (zoomFocus !== z) return stop();
+    const active = document.activeElement;
+    if (performance.now() > z.until || !z.el.isConnected || (active !== document.body && active !== z.el)) return stop();
+    if (active === z.el) {                          // keep the latest selection
+      z.start = z.el.selectionStart; z.end = z.el.selectionEnd; z.scroll = z.el.scrollTop;
+    } else if (z.el.offsetParent && getComputedStyle(z.el).visibility !== 'hidden') {
+      z.el.focus({ preventScroll: true });
+      try { z.el.setSelectionRange(z.start, z.end); } catch (_) {}
+      z.el.scrollTop = z.scroll;
+    }
+    requestAnimationFrame(watch);
+  };
+  requestAnimationFrame(watch);
+}
+
 // Every live box's update(). The yellow mark copies the box's font and padding
 // in px, so it is redrawn after each zoom (onZoom).
 const liveUpdates = new Set();

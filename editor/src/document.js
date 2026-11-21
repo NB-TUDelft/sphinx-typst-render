@@ -53,6 +53,19 @@ export function exerciseForPage(pageIndex) {
   return found || GENERAL;
 }
 
+// The section or sub-part that starts above a point (its top edge, in PDF
+// units) on a page, or earlier. Added pages carry their own.
+export function exerciseAt(page, top) {
+  const pi = state.pageInfo[page];
+  if (pi && pi.added && pi.exercise) return pi.exercise;
+  let found = null;
+  for (const e of state.exercises) {
+    if (e.page < 0) continue;
+    if (e.page < page || (e.page === page && (e.top === null || e.top >= top))) found = e.title;
+  }
+  return found || GENERAL;
+}
+
 const templateIndexOf = (ordinal) => {
   let n = -1;
   for (let i = 0; i < state.pageInfo.length; i++) {
@@ -106,15 +119,7 @@ export async function analyse() {
   }
   for (const s of state.slots) {
     if (s.pageId) continue;               // a box on an added page keeps the exercise it was made for
-    const page = templateIndexOf(s.ordinal);
-    // section that starts above the slot's top edge on its page, or earlier
-    const slotTop = Math.max(s.rect[1], s.rect[3]);
-    let found = null;
-    for (const e of state.exercises) {
-      if (e.page < 0) continue;
-      if (e.page < page || (e.page === page && (e.top === null || e.top >= slotTop))) found = e.title;
-    }
-    s.exercise = s.exercise || found || GENERAL;
+    s.exercise = s.exercise || exerciseAt(templateIndexOf(s.ordinal), Math.max(s.rect[1], s.rect[3]));
   }
 }
 

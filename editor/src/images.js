@@ -30,6 +30,9 @@ export async function decodeImage(file) {
     } finally { task.destroy(); }
   }
   try { return await createImageBitmap(file); } catch (err) {
+    // Only SVG needs an <img>: an <img> also "decodes" a broken JPEG or PNG
+    // (cut off halfway, say) without an error, and would put half a picture in.
+    if (!(file.type === 'image/svg+xml' || /\.svgz?$/i.test(file.name))) throw err;
     const url = URL.createObjectURL(file);
     try {
       const img = new Image();

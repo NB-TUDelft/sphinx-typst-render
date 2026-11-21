@@ -10,7 +10,7 @@ import {
   loadFieldFont, loadFontkit, wrapLines, boxOf, daSize, startSize, fitsAt, fitSize, splitPoint, drawFieldText, LEAD,
 } from './text.js';
 import { askOverflow } from './dialogs.js';
-import { documentBytes } from './document.js';
+import { documentBytes, exerciseAt } from './document.js';
 import { setSaveBadge } from './status.js';
 import { config } from './config.js';
 
@@ -184,7 +184,7 @@ export async function flattenedBytes(decide = askOverflow) {
       pg = pl.addPage([PW, PH0]); key = fontKey(pg);
       const n = pl.getPageCount(); pages.push(n);
       label(pg, key, `[[${P}:page n="${n}" kind="overflow"${attr('field', o.name)}]]`, 2, PH0 - 6);
-      exact.pages.push({ n, kind: 'overflow', exercise: null, field: o.name });
+      exact.pages.push({ n, kind: 'overflow', exercise: exerciseAt(o.t.pageNo - 1, Math.max(o.t.rect[1], o.t.rect[3])), field: o.name });
       y = PH0 - M;
     };
     newPage();

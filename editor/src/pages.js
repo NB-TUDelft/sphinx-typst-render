@@ -53,7 +53,7 @@ export async function insertImagePage() {
     catch (err) { toast(`Could not read ${file.name} (${err.message}). Try a JPEG or PNG.`); }
   }
   if (!recs.length) return;
-  if (files.length > cols * rows) toast(`Only the first ${cols * rows} images fit on this page.`);
+  if (files.length > cols * rows) toast(cols * rows === 1 ? 'Only the first image fits on this page.' : `Only the first ${cols * rows} images fit on this page.`);
   await transform(async pl => {
     const { width: W, height: H } = pl.getPage(0).getSize();
     const page = pl.insertPage(at, [W, H]);

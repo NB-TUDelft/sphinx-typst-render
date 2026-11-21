@@ -14,6 +14,7 @@ export const $ = (tag, attrs = {}, ...kids) => {
 export const ansi = s => String(s).replace(/[‒-―]/g, '-').replace(/[^\x20-\x7e\xa0-\xff\n]/g, '?');
 export const nowIso = () => new Date().toISOString();
 export const toast = (msg, ms = 3500) => {
+  document.querySelectorAll('.lb-toast').forEach(old => old.remove());   // one message at a time
   const t = $('div', { class: 'lb-toast', role: 'status' }, msg);
   document.body.append(t);
   setTimeout(() => t.remove(), ms);

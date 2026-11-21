@@ -313,6 +313,15 @@ from pdf.js's own components (`PDFViewer`, `EventBus`, `PDFLinkService`,
 the other modules in `src/` add the editing. The release workflow runs the
 build before packaging, so every wheel and sdist carries it (see RELEASING.md).
 
+The editing modules are the logbook site's editor
+([NB-TUDelft/EI_Logbooks](https://github.com/NB-TUDelft/EI_Logbooks),
+`site/editor/logbook.js`) split up and made configurable, in step with its
+commit `8f9aede` (2026-11-21). To take in later changes, diff `site/editor/`
+from that commit and port them module by module. One fix is this package's
+own: an empty picture box's form field is hidden (`editor.css`), because
+pdf.js stacks a page's fields with a rising z-index, and on a busy page the
+field would cover the box's "Insert image" button.
+
 ## Licence
 
 GNU Affero General Public License v3.0 or later, see [LICENSE](LICENSE).

@@ -70,13 +70,21 @@ export function fitSize(font, text, multi, w, h, start, extraLines = 0) {
 }
 // Where a too-long answer is cut: after the last ".", "!", "?" or line break whose text
 // still fits (leaving `extraLines` free for the reference); else the last space; else 0.
+// A longer start never fits better than a shorter one, so a binary search
+// finds the last cut that fits: a handful of tries instead of one per word,
+// which kept long answers from freezing the page on every keystroke and zoom.
 export function splitPoint(font, text, w, h, size, extraLines) {
   const ok = n => fitsAt(font, text.slice(0, n).trimEnd(), true, w, h, size, extraLines);
-  let best = 0;
-  for (const m of text.matchAll(/[.!?](?=\s|$)|\n/g)) { if (ok(m.index + 1)) best = m.index + 1; else break; }
-  if (best) return best;
-  for (const m of text.matchAll(/\s+/g)) { if (ok(m.index)) best = m.index; else break; }
-  return best;
+  const lastOk = cuts => {
+    let lo = 0, hi = cuts.length - 1, best = 0;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (ok(cuts[mid])) { best = cuts[mid]; lo = mid + 1; } else hi = mid - 1;
+    }
+    return best;
+  };
+  return lastOk([...text.matchAll(/[.!?](?=\s|$)|\n/g)].map(m => m.index + 1))
+    || lastOk([...text.matchAll(/\s+/g)].map(m => m.index));
 }
 
 export function drawFieldText(page, font, charset, rect, value, da, ff, q, opts = {}) {

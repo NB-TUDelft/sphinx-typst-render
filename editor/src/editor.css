@@ -145,6 +145,12 @@ body.lb-busy #lbSaveBadge::after { content: ""; display: inline-block; width: 10
 .lb-slot:not(.lb-filled) { outline: 2px dashed rgba(0, 166, 214, .55); outline-offset: -2px; border-radius: 4px; align-items: center;
   background: #f6fbfd; pointer-events: auto; cursor: pointer; }
 .lb-slot:not(.lb-filled):hover { background: #eaf6fb; }
+/* An empty image box's form field only marks where the box is; the overlay
+   above it takes the clicks. pdf.js stacks a page's fields with a rising
+   z-index, one per field, so on a busy page a late box's field would rise
+   above the overlay (z-index 30) and take clicks and keys instead of "Insert
+   image". Hidden, it can be neither clicked nor reached with Tab. */
+body.lb-custom .annotationLayer section:has(:is(input, textarea)[name^="img_"]) { visibility: hidden; pointer-events: none; }
 
 /* Form fields: quiet tint instead of pdf.js's bright blue, an accent ring while typing.
    The tint must stay see-through: pdf.js paints drawings and dropped images on the
@@ -185,7 +191,7 @@ body.lb-custom .annotationLayer :is(.textWidgetAnnotation, .choiceWidgetAnnotati
   box-shadow: 0 10px 30px rgba(16, 24, 40, .3); }
 
 .lb-modal-backdrop { position: fixed; inset: 0; background: rgba(12, 20, 33, .42); display: flex; align-items: center; justify-content: center; z-index: 100000; padding: 16px; }
-.lb-modal { background: #fff; color: var(--lb-ink); border-radius: 16px; padding: 22px 22px 18px; width: min(460px, 100%);
+.lb-modal { box-sizing: border-box; max-height: calc(100dvh - 32px); overflow-y: auto; background: #fff; color: var(--lb-ink); border-radius: 16px; padding: 22px 22px 18px; width: min(460px, 100%);
   box-shadow: 0 24px 64px rgba(16, 24, 40, .3); font: 14px/1.45 var(--lb-font); }
 .lb-modal h2 { margin: 0 0 8px; font-size: 17px; font-weight: 650; }
 .lb-modal-text { margin: 0 0 14px; color: var(--lb-muted); }
