@@ -100,3 +100,33 @@ def test_the_overview_follows_changes_on_other_pages(tmp_path: Path) -> None:
     os.utime(mole, (later, later))
     page = _build(src, tmp_path, fresh=False)        # incremental: only mole.rst changed
     assert [card["title"] for card in _cards(page)] == ["Entry 1.1", "Entry 1.2", "Entry 2.9"]
+
+
+def test_a_weekly_box_per_group_from_the_first_day(tmp_path: Path) -> None:
+    src = _project(tmp_path, "")
+    (src / "misc" / "logbooks.rst").write_text(
+        "Log books\n=========\n\n.. typst-overview::\n"
+        "   :highlight-title: This week\n   :highlight-weekly: Week 1, 2026-11-21\n"
+    )
+    page = _build(src, tmp_path)
+    boxes = re.findall(
+        r'<section class="typst-overview-highlight" data-from="([\d-]+)" data-until="([\d-]+)" hidden>'
+        r'\s*<h2 class="typst-overview-group">(.*?)</h2>(.*?)</section>',
+        page, re.S,
+    )
+    assert [(begin, end, title) for begin, end, title, _ in boxes] == [
+        ("2026-11-21", "2026-11-28", "This week"),
+        ("2026-11-28", "2026-12-05", "This week"),
+    ]
+    assert [card["title"] for card in _cards(boxes[0][3])] == ["Entry 1.1", "Entry 1.2"]
+    assert [card["title"] for card in _cards(boxes[1][3])] == ["Entry 2.1"]
+    assert "document.currentScript" in page
+
+
+def test_a_weekly_box_needs_a_group_and_a_date(tmp_path: Path) -> None:
+    src = _project(tmp_path, "")
+    (src / "misc" / "logbooks.rst").write_text(
+        "Log books\n=========\n\n.. typst-overview::\n   :highlight-weekly: Week 1\n"
+    )
+    page = _build(src, tmp_path)
+    assert "data-from" not in page

@@ -10,13 +10,17 @@ it first.
 
 from __future__ import annotations
 
+import datetime
 import html
 
 from docutils import nodes
 from docutils.parsers.rst import directives
+from sphinx.util import logging
 from sphinx.util.docutils import SphinxDirective
 
 from . import _downloads, _editor
+
+logger = logging.getLogger(__name__)
 
 #: Attribute on the build environment holding the pages that show an overview.
 ENV_KEY = "typst_render_overview_docs"
@@ -58,12 +62,19 @@ class TypstOverviewDirective(SphinxDirective):
 
     ``:highlight:`` repeats the named entries (their ``:label:``, comma
     separated) in a box on top, headed ``:highlight-title:`` ("Highlight").
+
+    ``:highlight-weekly: Week 3, 2026-11-21`` fills that box by the calendar
+    instead: the group "Week 3" from that date, the group after it seven days
+    later, and so on. The reader's browser picks the box for today, so the
+    page needs no rebuild; before the first date and after the last group
+    there is no box.
     """
 
     has_content = False
     option_spec = {
         "highlight": directives.unchanged,
         "highlight-title": directives.unchanged,
+        "highlight-weekly": directives.unchanged,
     }
 
     def run(self) -> list[nodes.Node]:
@@ -71,6 +82,19 @@ class TypstOverviewDirective(SphinxDirective):
         node = overview()
         node["highlight"] = _labels(self.options.get("highlight", ""))
         node["highlight_title"] = self.options.get("highlight-title") or "Highlight"
+        node["weekly"] = None
+        if "highlight-weekly" in self.options:
+            group, _, start = self.options["highlight-weekly"].rpartition(",")
+            try:
+                day = datetime.date.fromisoformat(start.strip())
+            except ValueError:
+                day = None
+            if not group.strip() or day is None:
+                raise self.error(
+                    ":highlight-weekly: takes a group and its first day, "
+                    "like 'Week 3, 2026-11-21'"
+                )
+            node["weekly"] = (group.strip(), day.isoformat())
         return [node]
 
 
@@ -144,9 +168,49 @@ def render(app, docname: str, node: overview) -> str:
             + _group(node["highlight_title"], highlighted)
             + "</section>"
         )
+    weekly = _weekly(node, groups, docname)
+    parts += weekly
     parts += [_group(title, cards) for title, cards in groups.items()]
+    if weekly:
+        parts.append(_SHOW_TODAY)
     parts.append("</div>")
     return "\n".join(parts)
+
+
+#: Unhides the weekly box whose dates hold today, in the reader's own time zone.
+_SHOW_TODAY = (
+    "<script>(function () {"
+    " var d = new Date(), p = function (n) { return String(n).padStart(2, '0'); };"
+    " var today = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());"
+    " document.currentScript.parentNode.querySelectorAll('[data-from]').forEach(function (box) {"
+    " if (box.dataset.from <= today && today < box.dataset.until) box.hidden = false; });"
+    " })();</script>"
+)
+
+
+def _weekly(node: overview, groups: dict[str, list[str]], docname: str) -> list[str]:
+    """One hidden box per group from the named one on, each with its seven days."""
+    if not node.get("weekly"):
+        return []
+    first, start = node["weekly"]
+    titles = list(groups)
+    if first not in titles:
+        logger.warning(
+            "typst-overview: no group %r for :highlight-weekly: (groups: %s)",
+            first, ", ".join(titles), location=docname,
+        )
+        return []
+    day = datetime.date.fromisoformat(start)
+    boxes = []
+    for step, title in enumerate(titles[titles.index(first):]):
+        begin = day + datetime.timedelta(weeks=step)
+        end = begin + datetime.timedelta(weeks=1)
+        boxes.append(
+            f'<section class="typst-overview-highlight" data-from="{begin}" data-until="{end}" hidden>'
+            + _group(node["highlight_title"], groups[title])
+            + "</section>"
+        )
+    return boxes
 
 
 def _group(title: str, cards: list[str]) -> str:
