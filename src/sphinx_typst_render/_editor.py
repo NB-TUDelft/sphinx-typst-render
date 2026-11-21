@@ -1,7 +1,7 @@
 """The in-browser editor: a page on pdf.js where students fill in a PDF.
 
 The bundle lives in ``_editor/`` beside this module. It is built from the
-``editor/`` folder of the source repository with npm (see RELEASING.md) and
+``editor/`` folder of the source repository with pnpm (see RELEASING.md) and
 ships in every wheel. A source checkout that has not run that build has no
 editor, and asking for one then fails with :data:`MISSING`.
 """
@@ -30,7 +30,7 @@ TO_ROOT = "../../"
 
 MISSING = (
     "the editor is not built into this installation of sphinx-typst-render. "
-    "Install a release from PyPI, or run `npm ci && npm run build` in the "
+    "Install a release from PyPI, or run `pnpm install && pnpm run build` in the "
     "editor/ folder of a source checkout."
 )
 

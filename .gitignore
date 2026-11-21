@@ -11,5 +11,5 @@ __pycache__/
 *.typst-stamp
 /book/_typst_lib/
 
-# The editor bundle, built from editor/ by `npm run build` (see RELEASING.md)
+# The editor bundle, built from editor/ by `pnpm run build` (see RELEASING.md)
 /src/sphinx_typst_render/_editor/

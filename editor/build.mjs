@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Builds the editor into src/sphinx_typst_render/_editor/, the folder the
-// Python wheel ships. Everything comes from npm:
+// Python wheel ships. Everything comes from the npm registry:
 //
 //   viewer.html          the page, with the package version as cache key
 //   editor.js, chunks/   our modules, pdf.js and its viewer components and
@@ -13,7 +13,7 @@
 //   fonts/               Inter, the interface font
 //   THIRD_PARTY_LICENSES.txt
 //
-// Run with `npm run build`. The folder is generated: it is deleted and
+// Run with `pnpm run build`. The folder is generated: it is deleted and
 // written again on every run, and git ignores it.
 import { build, transform } from 'esbuild';
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';

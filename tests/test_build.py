@@ -11,7 +11,7 @@ from sphinx.application import Sphinx
 from sphinx_typst_render import _editor
 
 pytestmark = pytest.mark.skipif(
-    not _editor.available(), reason="editor bundle not built (npm run build in editor/)"
+    not _editor.available(), reason="editor bundle not built (pnpm run build in editor/)"
 )
 
 

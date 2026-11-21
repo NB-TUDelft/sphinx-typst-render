@@ -12,7 +12,7 @@ import pytest
 from sphinx_typst_render import _downloads, _editor
 
 editor_built = pytest.mark.skipif(
-    not _editor.available(), reason="editor bundle not built (npm run build in editor/)"
+    not _editor.available(), reason="editor bundle not built (pnpm run build in editor/)"
 )
 
 
@@ -124,7 +124,7 @@ def test_install_copies_the_bundle_and_writes_the_settings(tmp_path: Path) -> No
 
 
 def test_release_builds_carry_the_editor() -> None:
-    """The publish workflow runs `npm run build` before packaging. A wheel built
+    """The publish workflow runs `pnpm run build` before packaging. A wheel built
     without it would offer no editor, so CI must not get this far without one."""
     if not os.environ.get("CI"):
         pytest.skip("enforced in CI only")

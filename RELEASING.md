@@ -58,12 +58,13 @@ duplicate-version rejection that cannot be undone.
 
 ## The editor bundle
 
-`src/sphinx_typst_render/_editor/` is generated from `editor/` by npm and is
-not in git. `publish.yml` builds it on every run: it sets up Node, and the
-action's `prepare` input runs `npm ci && npm run check` (lint, then build)
-before the tests and `uv build`. The wheel and the sdist then carry it like
-any other package file, and the sdist carries `editor/` too, so the bundle can
-be rebuilt from it.
+`src/sphinx_typst_render/_editor/` is generated from `editor/` by pnpm and is
+not in git. `publish.yml` builds it on every run: it sets up Node and pnpm
+(the version `packageManager` in `editor/package.json` names), and the
+action's `prepare` input runs `pnpm install --frozen-lockfile` and
+`pnpm run check` (lint, then build) before the tests and `uv build`. The wheel
+and the sdist then carry it like any other package file, and the sdist carries
+`editor/` too, so the bundle can be rebuilt from it.
 
 In CI, `tests/test_menu.py::test_release_builds_carry_the_editor` fails when
 the bundle is missing, so a release cannot go out without it.
@@ -71,12 +72,13 @@ the bundle is missing, so a release cannot go out without it.
 Locally, build it before `uv build` or before running the editor's tests:
 
 ```bash
-(cd editor && npm ci && npm run check)
+(cd editor && pnpm install --frozen-lockfile && pnpm run check)
 ```
 
-pdf.js is pinned in `editor/package.json`. To update it, bump `pdfjs-dist`,
-run the build, and check the editor in a browser: it reaches into some pdf.js
-internals (see `editor/src/viewer.js`).
+pdf.js is pinned in `editor/package.json`. To update it, bump `pdfjs-dist`
+there, run `pnpm install` to update `pnpm-lock.yaml`, run the build, and check
+the editor in a browser: it reaches into some pdf.js internals (see
+`editor/src/viewer.js`).
 
 ---
 
@@ -188,7 +190,7 @@ Only if Actions is unavailable. Prefer the tag flow, which needs no credentials
 locally.
 
 ```bash
-(cd editor && npm ci && npm run check)
+(cd editor && pnpm install --frozen-lockfile && pnpm run check)
 uv build
 UV_PUBLISH_TOKEN=pypi-... uv publish
 ```

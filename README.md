@@ -293,20 +293,25 @@ them too and let CI regenerate them.
 
 ## Developing the editor
 
-The editor's source is in `editor/` and builds with npm into
+The editor's source is in `editor/` and builds with pnpm into
 `src/sphinx_typst_render/_editor/`, which git ignores:
 
 ```bash
 cd editor
-npm ci
-npm run check    # lint, then build
+pnpm install
+pnpm run check    # lint, then build
 ```
 
-Everything comes from npm. `src/viewer.js` assembles the viewer from pdf.js's
-own components (`PDFViewer`, `EventBus`, `PDFLinkService`, `DownloadManager`,
-`ProgressBar`) the way pdf.js's stock viewer app wires them; the other modules in
-`src/` add the editing. The release workflow runs the build before packaging, so
-every wheel and sdist carries it (see RELEASING.md).
+`packageManager` in `package.json` names the pnpm version CI uses. pnpm stops
+an install when a dependency's install script has been neither allowed nor
+denied; `pnpm-workspace.yaml` allows esbuild's, and `pnpm approve-builds`
+records the choice for any new one.
+
+Everything comes from the npm registry. `src/viewer.js` assembles the viewer
+from pdf.js's own components (`PDFViewer`, `EventBus`, `PDFLinkService`,
+`DownloadManager`, `ProgressBar`) the way pdf.js's stock viewer app wires them;
+the other modules in `src/` add the editing. The release workflow runs the
+build before packaging, so every wheel and sdist carries it (see RELEASING.md).
 
 ## Licence
 
