@@ -109,11 +109,8 @@ export function buildBar() {
   const menuItem = (id, label, fn) => $('button', { id, type: 'button', class: 'lb-menu-item', role: 'menuitem',
     onclick: () => { closeMenu(); fn(); } }, label);
   ui.menu.append(
-    menuItem('lbMenuOpen', 'Open a saved copy…', () => a().openFile()),
-    menuItem('lbMenuSave', 'Download an editable copy', () => a().saveCopy()),
-    menuItem('lbMenuPrint', 'Print…', () => a().print()),
-    ...(config.backUrl ? [$('div', { class: 'lb-menu-sep' }),
-    menuItem('lbMenuBack', 'Back to the page', () => { location.href = config.backUrl; })] : []));
+    menuItem('lbMenuOpen', 'Import a PDF…', () => a().openFile()),
+    menuItem('lbMenuSave', 'Download to keep filling in elsewhere (tablet, PDF app)', () => a().saveCopy()));
   const moreBtn = btn('lbMore', 'More', 'more', e => { e.stopPropagation(); const open = ui.menu.hidden; closeMenu(); if (open) openMenu(); });
   moreBtn.setAttribute('aria-haspopup', 'menu');
   ui.pmenu = $('div', { class: 'lb-menu lb-privacy-menu', role: 'menu', hidden: '' },

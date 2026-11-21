@@ -4,7 +4,7 @@ import { app, state } from './state.js';
 import { $, nowIso, toast } from './util.js';
 import { idb, migrateSaves, olderSaves, hasBytes, PREV } from './storage.js';
 import { setSaveBadge } from './status.js';
-import { askConfirm } from './dialogs.js';
+import { askConfirm, modal } from './dialogs.js';
 import { documentBytes, reopen } from './document.js';
 import { config } from './config.js';
 
@@ -37,7 +37,8 @@ export async function offerRestore() {
   const id = state.saveKey, doc = state.doc;
   await migrateSaves();
   const rec = await idb.get(id);
-  if (!hasBytes(rec) || state.doc !== doc) return;
+  if (state.doc !== doc) return;
+  if (!hasBytes(rec)) { if (id) await welcome(doc); return; }
   const older = (await olderSaves(id))[0];   // the newest older save, if any
   const fmt = t => new Date(t).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const label = fmt(rec.time);
@@ -72,4 +73,20 @@ export async function offerRestore() {
       done(); await idb.del(id);
     } }, 'Start fresh'));
   document.body.append(bar);
+}
+
+// Nothing saved for this document in this browser: a new start, or work from
+// another browser, or cookies were cleared. Offer to import a PDF.
+let welcomed = false; // once per visit: an imported PDF must not ask again
+async function welcome(doc) {
+  if (welcomed) return;
+  welcomed = true;
+  state.restorePending = true; // nothing to overwrite, but wait for the choice
+  const choice = await modal(`New ${config.noun}`, [
+    $('p', { class: 'lb-modal-text' }, 'Your work is saved in this browser as you go.'),
+    $('p', { class: 'lb-modal-text' }, `Started this ${config.noun} in another browser, or cleared your cookies? Import the PDF you downloaded, and carry on from there.`)],
+    [{ text: 'Import a PDF…', id: 'lbWelcomeImport', value: 'import' },
+     { text: 'Start', primary: true, id: 'lbWelcomeStart', value: 'start' }]);
+  state.restorePending = false;
+  if (choice === 'import' && state.doc === doc) app().openFile();
 }

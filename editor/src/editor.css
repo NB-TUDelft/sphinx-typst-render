@@ -272,5 +272,5 @@ body.lb-side-open #lbSide { transform: none; visibility: visible; }
   #printContainer > .printedPage:last-child { break-after: auto; }
   #printContainer img { display: block; max-width: 100%; max-height: 100%; }
   /* A print from the browser's own menu cannot wait for that rendering. */
-  body:not([data-printing])::after { content: "To print, use Print in the editor's menu, or Ctrl+P."; display: block; padding: 2cm; font: 14pt/1.4 var(--lb-font); }
+  body:not([data-printing])::after { content: "To print, press Ctrl+P in the editor."; display: block; padding: 2cm; font: 14pt/1.4 var(--lb-font); }
 }

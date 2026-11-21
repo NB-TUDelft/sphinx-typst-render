@@ -74,7 +74,7 @@ async function onDocumentLoaded() {
 }
 
 // Ctrl+S downloads nothing: the work saves itself in this browser, Export PDF
-// makes the hand-in file, and the menu has an editable copy.
+// makes the hand-in file, and the menu downloads a copy to keep filling in elsewhere.
 window.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 's' || e.key === 'S')) {
     e.preventDefault();
