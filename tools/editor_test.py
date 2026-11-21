@@ -195,6 +195,17 @@ def run_suite():
                     };
                     setTimeout(waitIdle, 400);
                 })""", slot_name)
+                # And a photo dropped onto the page itself, outside any image box.
+                pg.evaluate("""(b64) => {
+                    const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+                    const dt = new DataTransfer();
+                    dt.items.add(new File([bin], 'loose.png', { type: 'image/png' }));
+                    const t = document.querySelector('.page[data-page-number="1"]');
+                    t.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+                    t.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+                }""", base64.b64encode(png_path.read_bytes()).decode())
+                time.sleep(2)
+                pg.click("#lbToolSelect")
                 pages_before = pg.evaluate("window.typstRenderEditor.state().pageInfo.length")
                 snap(pg, "01_filled")
 
@@ -217,6 +228,10 @@ def run_suite():
                        f"{pages_before} -> {len(r.pages)} pages")
                 slots = sum(1 for v in lf["images"].values() if v and v.get("kind") == "slot")
                 record("07_photo_listed", slots == 1, f"slot images={slots}")
+                loose = [k for k, v in lf["images"].items() if v and v.get("kind") == "loose"]
+                text1 = r.pages[0].extract_text()
+                record("07b_loose_photo_labelled", loose == ["loose:1-1"] and 'loose="1-1"' in text1,
+                       f"loose images={loose}")
 
                 # Open the export as a fresh file: the editable layer comes back.
                 (out / "reopen_export.pdf").write_bytes(exp)

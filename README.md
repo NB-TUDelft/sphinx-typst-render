@@ -197,6 +197,9 @@ picture is painted onto the page, so any reader shows the same thing. Code can
 still read it back. Each answer sits between invisible
 `[[<label_prefix>:field name="..."]]` and `[[/<label_prefix>:field]]` labels in
 the page text, and the PDF's `LogbookFields` metadata holds every answer as JSON.
+A picture dragged or pasted onto a page (not into an image box) is labelled
+`[[<label_prefix>:image loose="<page>-<n>" ...]]` and listed in `LogbookFields`
+with kind `loose`, its page, section and position.
 The export also parks its editable layer (each page's own contents and
 annotations, and the form) under a `<label_prefix>Editable` key that readers
 ignore, so opening the export in the editor puts the fields back, drops the
