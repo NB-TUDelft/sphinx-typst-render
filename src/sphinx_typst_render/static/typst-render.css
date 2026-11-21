@@ -102,6 +102,28 @@
   border-radius: 0.8rem;
   background: color-mix(in srgb, var(--pst-color-primary, #0a7d91) 8%, transparent);
 }
+/* The weekly box is the week's entry point, so it shouts a little: a deeper
+   tint, a solid title chip and lifted cards. */
+.typst-overview-highlight[data-from] {
+  padding: 1rem 1rem 1.1rem;
+  border: 2px solid var(--pst-color-primary, #0a7d91);
+  background: color-mix(in srgb, var(--pst-color-primary, #0a7d91) 16%, transparent);
+  box-shadow: 0 3px 12px rgb(0 0 0 / 0.12);
+}
+.typst-overview-highlight[data-from] > .typst-overview-group {
+  display: inline-block;
+  margin: 0 0 0.7rem;
+  padding: 0.32rem 0.7rem;
+  border-radius: 999px;
+  background: var(--pst-color-primary, #0a7d91);
+  color: var(--pst-color-on-primary, #fff);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.typst-overview-highlight[data-from] .typst-overview-item {
+  background: var(--pst-color-background, #fff);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.1);
+}
 .typst-overview-highlight[hidden] {
   display: none;
 }
