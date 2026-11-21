@@ -105,10 +105,12 @@ def test_editor_settings_reach_the_editor_under_its_own_names() -> None:
     assert (settings["labelPrefix"], settings["noun"]) == ("NB2420", "logbook")
     assert settings["aliases"] == {"keys": {"2.3": "2.2"}}
     assert _editor.settings(_config())["storage"] == "typst-render-editor"
-    # Print stays in the editor menu unless the book hides it.
+    # Print and Back stay in the editor menu unless the book hides them.
     assert _editor.settings(_config())["showPrint"] is True
     hidden = _editor.settings(_config(typst_render_editor={"show_print": False}))
     assert hidden["showPrint"] is False
+    assert _editor.settings(_config())["showBack"] is True
+    assert _editor.settings(_config(typst_render_editor={"show_back": False}))["showBack"] is False
 
 
 def test_favicon_url_mirrors_the_book() -> None:

@@ -153,7 +153,10 @@ def run_suite():
         out, pdf_rel = build_site(Path(tmp))
         httpd, port = start_server(out)
         base = f"http://127.0.0.1:{port}"
-        editor_url = f"{base}/_static/typst-editor/viewer.html?file=../../{pdf_rel}"
+        editor_url = (
+            f"{base}/_static/typst-editor/viewer.html?file=../../{pdf_rel}"
+            "&back=../../index.html"
+        )
 
         short_answer = "Short answer with Ünïcode."
         long_answer = "A very long answer. " * 120
@@ -170,6 +173,8 @@ def run_suite():
                 wait_editor(pg)
                 has_print = pg.evaluate("!!document.getElementById('lbMenuPrint')")
                 record("00_print_item_shown_by_default", has_print, "show_print defaults to true")
+                has_back = pg.evaluate("!!document.getElementById('lbMenuBack')")
+                record("00_back_item_shown_by_default", has_back, "show_back defaults to true")
                 set_field(pg, "name", short_answer)
                 set_field(pg, "preparation", long_answer)
                 pg.evaluate("""() => {

@@ -58,6 +58,9 @@ DEFAULTS: dict[str, object] = {
     "export_message": "Exported. You can come back to change it and export again.",
     # Whether the editor's menu offers Print. Ctrl+P prints either way.
     "show_print": True,
+    # Whether the editor's menu links back to the page that opened it (only
+    # shown when the link into the editor carried that page along).
+    "show_back": True,
 }
 
 
@@ -92,6 +95,7 @@ def settings(config) -> dict[str, object]:
         "brand": str(merged["brand"]),
         "exportMessage": str(merged["export_message"]),
         "showPrint": bool(merged["show_print"]),
+        "showBack": bool(merged["show_back"]),
     }
 
 

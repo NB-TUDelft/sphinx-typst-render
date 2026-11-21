@@ -50,6 +50,9 @@ export const config = {
   // Whether the menu offers Print. A book can hide it (show_print: false);
   // Ctrl+P goes through the viewer's print rendering either way.
   showPrint: given.showPrint !== false,
+  // Whether the menu links back to the page that opened the editor (a book
+  // can hide it with show_back: false; the browser's back button remains).
+  showBack: given.showBack !== false,
   // The page that opened the editor, for the Back item in the menu.
   backUrl: sameSite(params.get('back')),
 };

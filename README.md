@@ -190,6 +190,7 @@ sphinx:
 | `brand` | none | Short mark before the title in the toolbar, e.g. a course code. |
 | `export_message` | a neutral line | Shown after an export. |
 | `show_print` | `true` | Whether the editor's menu offers Print. Set `false` to hide it; Ctrl+P prints either way. |
+| `show_back` | `true` | Whether the editor's menu links back to the page that opened it. Set `false` to hide it. |
 
 **Exports.** The exported PDF has no form fields left: every answer, drawing and
 picture is painted onto the page, so any reader shows the same thing. Code can
