@@ -84,7 +84,7 @@ async function welcome(doc) {
   state.restorePending = true; // nothing to overwrite, but wait for the choice
   const choice = await modal(`New ${config.noun}`, [
     $('p', { class: 'lb-modal-text' }, 'Your work is saved in this browser as you go.'),
-    $('p', { class: 'lb-modal-text' }, `Started this ${config.noun} in another browser, or cleared your cookies? Import the PDF you downloaded, and carry on from there.`)],
+    $('p', { class: 'lb-modal-text' }, `Started this ${config.noun} in another browser, or cleared your cookies? Import the PDF you downloaded or exported, and carry on from there.`)],
     [{ text: 'Import a PDF…', id: 'lbWelcomeImport', value: 'import' },
      { text: 'Start', primary: true, id: 'lbWelcomeStart', value: 'start' }]);
   state.restorePending = false;

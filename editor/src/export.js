@@ -80,6 +80,7 @@ export async function flattenedBytes(decide = askOverflow) {
     for (const k of ['Contents', 'Annots']) if (page.node.get(N(k))) parked[k] = copyOf(page.node.get(N(k)));
     page.node.set(N(PARK), ctx.obj(parked));
   }
+  let loose = 0;
   for (const [pageIndex, page] of pl.getPages().entries()) {
     const key = fontKey(page);
     const { height: PH } = page.getSize();
@@ -134,6 +135,12 @@ export async function flattenedBytes(decide = askOverflow) {
         const slot = nm.slice(config.slotPrefix.length), m = slotMeta(slot);
         exact.images[slot] = m;
         labels.push([imageLabel(slot, m), ...top(rectHere)]);
+      } else if (sub === '/Stamp' && rectHere) {                          // image dragged or pasted onto the page
+        const id = `loose:${pageIndex + 1}-${++loose}`;
+        const m = { kind: 'loose', page: pageIndex + 1, exercise: exerciseAt(pageIndex, Math.max(rectHere[1], rectHere[3])),
+          rect: rectHere.map(v => Math.round(v * 10) / 10) };
+        exact.images[id] = m;
+        labels.push([`[[${P}:image loose="${id.slice(6)}" filled="yes"${attr('exercise', m.exercise)}]]`, ...top(rectHere)]);
       }
       const ap = d.lookup(N('AP'));
       if (!(ap instanceof PDFDict)) continue;
