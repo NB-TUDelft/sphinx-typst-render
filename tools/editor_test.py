@@ -115,6 +115,9 @@ def wait_editor(pg, timeout=60000):
     )
     pg.wait_for_selector('[name="name"], [name="preparation"]', state="attached", timeout=timeout)
     time.sleep(1.0)
+    # A document with nothing saved in this browser first offers an import.
+    pg.evaluate("document.getElementById('lbWelcomeStart')?.click()")
+    time.sleep(0.3)
 
 
 def set_field(pg, name, value):
@@ -165,6 +168,8 @@ def run_suite():
                 # Fill the worksheet and put a photo in the image box.
                 pg.goto(editor_url)
                 wait_editor(pg)
+                has_print = pg.evaluate("!!document.getElementById('lbMenuPrint')")
+                record("00_print_item_shown_by_default", has_print, "show_print defaults to true")
                 set_field(pg, "name", short_answer)
                 set_field(pg, "preparation", long_answer)
                 pg.evaluate("""() => {

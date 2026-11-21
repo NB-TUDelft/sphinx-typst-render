@@ -56,6 +56,8 @@ DEFAULTS: dict[str, object] = {
     "brand": "",
     # Shown after an export.
     "export_message": "Exported. You can come back to change it and export again.",
+    # Whether the editor's menu offers Print. Ctrl+P prints either way.
+    "show_print": True,
 }
 
 
@@ -89,6 +91,7 @@ def settings(config) -> dict[str, object]:
         "nounPlural": merged["noun_plural"],
         "brand": str(merged["brand"]),
         "exportMessage": str(merged["export_message"]),
+        "showPrint": bool(merged["show_print"]),
     }
 
 

@@ -47,6 +47,9 @@ export const config = {
   // Optional short mark in front of the title, e.g. a course code.
   brand: given.brand || '',
   exportMessage: given.exportMessage || 'Exported. You can come back to change it and export again.',
+  // Whether the menu offers Print. A book can hide it (show_print: false);
+  // Ctrl+P goes through the viewer's print rendering either way.
+  showPrint: given.showPrint !== false,
   // The page that opened the editor, for the Back item in the menu.
   backUrl: sameSite(params.get('back')),
 };

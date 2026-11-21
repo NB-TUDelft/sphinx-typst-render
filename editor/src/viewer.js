@@ -115,7 +115,7 @@ class Viewer {
     this.eventBus.dispatch('documentloaded', { source: this });
   }
 
-  // "Open a saved copy": a PDF from this computer replaces the open one.
+  // "Import a PDF": a PDF from this computer replaces the open one.
   openFile() {
     const input = Object.assign(document.createElement('input'), {
       type: 'file', accept: '.pdf,application/pdf', className: 'lb-hidden-input',

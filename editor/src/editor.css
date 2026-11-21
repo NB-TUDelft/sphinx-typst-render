@@ -1029,7 +1029,7 @@ body.lb-side-open #lbSide {
 	}
 	/* A print from the browser's own menu cannot wait for that rendering. */
 	body:not([data-printing])::after {
-		content: "To print, use Print in the editor's menu, or Ctrl+P.";
+		content: "To print, press Ctrl+P in the editor.";
 		display: block;
 		padding: 2cm;
 		font: 14pt / 1.4 var(--lb-font);
