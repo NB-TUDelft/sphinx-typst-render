@@ -6,7 +6,9 @@
  *   - image boxes: an "Insert image" button on each img_* field; the image is
  *     fitted inside the box and tagged with its section
  *   - its own toolbar, and an Export button that writes a flattened hand-in
- *     PDF with invisible [[<labelPrefix>:...]] labels around every answer
+ *     PDF with invisible [[<labelPrefix>:...]] labels around every answer;
+ *     the export parks its editable layer inside itself, so opening it here
+ *     again puts the fields back and the student can keep working on it
  *   - appending text pages (one big field) and image pages at the end, and
  *     deleting pages that were added (the document's own pages are locked)
  *   - autosave in the browser (IndexedDB), with an offer to restore
@@ -22,7 +24,7 @@ import { toast } from './util.js';
 import { setTestFileHook } from './images.js';
 import { setSaveBadge } from './status.js';
 import { autosaveNow, offerRestore } from './autosave.js';
-import { analyse } from './document.js';
+import { analyse, unparked } from './document.js';
 import { insertBlankPage, insertImagePage, deleteCurrentPage } from './pages.js';
 import { flattenedBytes, exportPdf } from './export.js';
 import { buildBar, syncMode, syncPage, syncZoom, syncTitle, updateDeleteButton } from './toolbar.js';
@@ -56,6 +58,14 @@ async function onDocumentLoaded() {
     state.otherTab = false;
   }
   const doc = a.pdfDocument;
+  if (fresh) {
+    const editable = await unparked(doc).catch(err => { console.error('[typst-editor] could not reopen the export', err); return null; });
+    if (editable && a.pdfDocument === doc) {
+      await a.open({ data: editable, filename: state.filename });
+      toast(`Opened your exported ${config.noun}. You can keep working on it.`, 6000);
+      return;
+    }
+  }
   await analyse();
   if (a.pdfDocument !== doc) return; // another file was opened meanwhile
   state.doc = doc;

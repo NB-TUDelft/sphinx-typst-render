@@ -195,6 +195,10 @@ picture is painted onto the page, so any reader shows the same thing. Code can
 still read it back. Each answer sits between invisible
 `[[<label_prefix>:field name="..."]]` and `[[/<label_prefix>:field]]` labels in
 the page text, and the PDF's `LogbookFields` metadata holds every answer as JSON.
+The export also parks its editable layer (each page's own contents and
+annotations, and the form) under a `<label_prefix>Editable` key that readers
+ignore, so opening the export in the editor puts the fields back, drops the
+overflow pages, and the student can keep working on the file they handed in.
 
 **Saves** stay in the browser of the computer used. Browsers keep them per site
 origin, so books on one origin (say `<org>.github.io`) that use the same
@@ -341,11 +345,20 @@ build before packaging, so every wheel and sdist carries it (see RELEASING.md).
 The editing modules are the logbook site's editor
 ([NB-TUDelft/EI_Logbooks](https://github.com/NB-TUDelft/EI_Logbooks),
 `site/editor/logbook.js`) split up and made configurable, in step with its
-commit `8f9aede` (2026-11-21). To take in later changes, diff `site/editor/`
-from that commit and port them module by module. One fix is this package's
-own: an empty picture box's form field is hidden (`editor.css`), because
-pdf.js stacks a page's fields with a rising z-index, and on a busy page the
-field would cover the box's "Insert image" button.
+commit `0e96a5e` (2026-11-21). To take in later changes, diff `site/editor/`
+from that commit and port them module by module. Not ported: labelling images
+dragged onto a page, because this editor offers no stamp tool for students to
+create them with. One fix is this package's own: an empty picture box's form
+field is hidden (`editor.css`), because pdf.js stacks a page's fields with a
+rising z-index, and on a busy page the field would cover the box's "Insert
+image" button.
+
+`tools/editor_test.py` drives the built editor in headless Chromium
+(Playwright): it builds a small Sphinx site, fills a worksheet in, exports
+it, reopens the export and checks that nothing was lost. The editor-test
+workflow runs it on pull requests that touch `editor/`; run it locally with
+`python tools/editor_test.py` after `pnpm run check`, with `playwright` and
+`pypdf` installed.
 
 ## Licence
 
@@ -354,3 +367,8 @@ GNU Affero General Public License v3.0 or later, see [LICENSE](LICENSE).
 The editor bundle includes pdf.js (Apache 2.0), pdf-lib and fontkit (MIT),
 pako (MIT and Zlib), tslib (0BSD) and the Inter font (OFL 1.1). Their licences
 are in `_editor/THIRD_PARTY_LICENSES.txt` and beside pdf.js's data files.
+
+The package also bundles the Maple Mono variable font (OFL 1.1, licence beside
+the font files in `fonts/`), offered to every Typst render next to the system
+fonts, so a worksheet can simply name it — `#set text(font: "Maple Mono")` —
+with its weight axis driven by `text(weight: ...)`.

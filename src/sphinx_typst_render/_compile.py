@@ -18,7 +18,17 @@ LIB_FILENAME = "capture_field.typ"
 
 #: Bumped whenever the generated output changes, to invalidate stale caches.
 #: 5: fillable PDFs keep the document's bookmarks.
-_CACHE_VERSION = 5
+#: 6: the bundled Maple Mono font is available to every render.
+_CACHE_VERSION = 6
+
+#: Fonts shipped inside this package (Maple Mono, a variable font), offered
+#: to every render alongside the system fonts, so a worksheet can name them
+#: without anything installed on the build machine.
+FONT_DIR = Path(__file__).parent / "fonts"
+
+
+def _font_paths() -> list[str]:
+    return [str(FONT_DIR)] if FONT_DIR.is_dir() else []
 
 #: Characters a generated text field accepts unless configured otherwise.
 #: Large enough that no worksheet answer reaches it, and written explicitly
@@ -122,6 +132,9 @@ def _fingerprint(request: RenderRequest) -> str:
     library = request.root / LIB_DIRNAME / LIB_FILENAME
     if library.is_file():
         digest.update(library.read_bytes())
+    for font in sorted(FONT_DIR.glob("*.ttf")) if FONT_DIR.is_dir() else []:
+        digest.update(font.name.encode())
+        digest.update(font.read_bytes())
     return digest.hexdigest()
 
 
@@ -253,14 +266,16 @@ def _add_form_fields(base: bytes, request: RenderRequest) -> bytes:
 
 
 def _compile_pdf(request: RenderRequest) -> bytes:
-    base = typst.compile(str(request.source), root=str(request.root), format="pdf")
+    base = typst.compile(str(request.source), root=str(request.root), format="pdf", font_paths=_font_paths())
     if not request.fillable:
         return base
     return _add_form_fields(base, request)
 
 
 def _compile_preview(request: RenderRequest) -> bytes:
-    options: dict[str, object] = {"root": str(request.root), "format": request.preview}
+    options: dict[str, object] = {
+        "root": str(request.root), "format": request.preview, "font_paths": _font_paths(),
+    }
     if request.preview == "png":
         options["ppi"] = request.ppi or 144.0
 

@@ -16,11 +16,17 @@ import { config } from './config.js';
 
 // Prefix of the invisible labels around every answer, e.g. [[FORM:field ...]].
 const P = config.labelPrefix;
+// Key the editable layer is parked under, on each page and in the catalog.
+const PARK = config.parkKey;
 
 // ------------------------------------------------------- flattened export
 // The hand-in PDF has no form fields or annotations left: every field value,
 // drawing, text box and image is painted into the page itself, so any PDF
-// reader or grading script sees it as ordinary page content.
+// reader or grading script sees it as ordinary page content. The editable
+// layer (each page's own contents and annotations, and the form) is parked
+// under PARK, which viewers ignore; opening the export in this editor puts
+// it back (unparked() in document.js). The photos and drawings are stored
+// once, shared by both, so the file barely grows.
 
 export async function flattenedBytes(decide = askOverflow) {
   const a = app();
@@ -67,6 +73,13 @@ export async function flattenedBytes(decide = askOverflow) {
   const imageLabel = (slot, m) => `[[${P}:image slot="${slot}" filled="yes"${attr('exercise', m.exercise)}` +
     `${attr('file', m.original_filename)}${attr('sha256', m.sha256)}${attr('sha512', m.sha512)}]]`;
 
+  const ownPages = pl.getPageCount();
+  const copyOf = v => { const o = v && ctx.lookup(v); return o instanceof PDFArray ? ctx.obj(o.asArray()) : v; };
+  for (const page of pl.getPages()) {
+    const parked = {};
+    for (const k of ['Contents', 'Annots']) if (page.node.get(N(k))) parked[k] = copyOf(page.node.get(N(k)));
+    page.node.set(N(PARK), ctx.obj(parked));
+  }
   for (const [pageIndex, page] of pl.getPages().entries()) {
     const key = fontKey(page);
     const { height: PH } = page.getSize();
@@ -211,6 +224,8 @@ export async function flattenedBytes(decide = askOverflow) {
     if (t.value.trim() || t.opts?.ref) drawFieldText(t.page, font, charset, t.rect, t.value, t.da, t.ff, t.q, t.opts || {});
     label(t.page, t.key, `[[/${P}:field]]`, x2 - 20, y1 + 1);
   }
+  const acroRef = pl.catalog.get(N('AcroForm'));
+  pl.catalog.set(N(PARK), ctx.obj({ Version: 1, PageCount: ownPages, ...(acroRef ? { AcroForm: acroRef } : {}) }));
   pl.catalog.delete(N('AcroForm'));
   pl.setKeywords([config.keywords]);
   pl.setProducer(config.producer);

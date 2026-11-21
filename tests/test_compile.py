@@ -83,6 +83,26 @@ def test_page_out_of_range_raises(tmp_path: Path) -> None:
         render(_request(tmp_path, DOUBLE, preview_page=9), tmp_path)
 
 
+def _font_names(pdf: Path) -> set[str]:
+    names = set()
+    for page in PdfReader(str(pdf)).pages:
+        for font in (page["/Resources"].get("/Font", {}) or {}).values():
+            names.add(str(font.get_object().get("/BaseFont", "")))
+    return names
+
+
+def test_bundled_maple_mono_renders_at_variable_weights(tmp_path: Path) -> None:
+    """The package ships Maple Mono, so worksheets can use it by name."""
+    body = (
+        "#set page(width: 80mm, height: 40mm)\n"
+        '#set text(font: "Maple Mono")\n'
+        "Light #text(weight: 300)[code] bold #text(weight: 800)[code] and #emph[italic]\n"
+    )
+    result = render(_request(tmp_path, body), tmp_path)
+    names = _font_names(result.pdf)
+    assert any("MapleMono" in name for name in names), names
+
+
 def test_field_library_is_staged(tmp_path: Path) -> None:
     staged = stage_field_library(tmp_path)
     assert staged is not None

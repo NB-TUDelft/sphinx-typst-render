@@ -36,6 +36,9 @@ export const config = {
   // recognisable.
   labelPrefix,
   slotPrefix: `${tag}-slot:`,
+  // Catalog and page key the export parks the editable layer under, so the
+  // flattened hand-in file can be opened here again and kept working on.
+  parkKey: `${labelPrefix}Editable`,
   keywords: `${tag}-${noun}`,
   producer: `${tag}-${noun} editor`,
   // What the documents are called in messages: "this worksheet", "all worksheets".

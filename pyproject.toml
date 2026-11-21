@@ -10,6 +10,11 @@ authors = [
     { name = "NB-TUDelft" },
     { name = "K.Zabłocki (Zamkorus)" },
 ]
+maintainers = [
+    { name = "NB-TUDelft" },
+    { name = "K.Zabłocki (Zamkorus)" },
+    { name = "AsapLoso" },
+]
 keywords = ["jupyter-book", "sphinx", "typst", "pdf", "forms", "documentation"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -48,7 +53,7 @@ dev = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-sphinx_typst_render = ["static/*.js", "static/*.css"]
+sphinx_typst_render = ["static/*.js", "static/*.css", "fonts/*.ttf", "fonts/*.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -83,7 +88,7 @@ source-exclude = ["editor/node_modules", "editor/.cache"]
 # architecture and every Python >=3.10.
 noarch = true
 build-channels = ["conda-forge"]
-maintainers = ["NB-TUDelft", "Zamkorus"]
+maintainers = ["NB-TUDelft", "Zamkorus", "AsapLoso"]
 test-imports = [
     "sphinx_typst_render",
 ]

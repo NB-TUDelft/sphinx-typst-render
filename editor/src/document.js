@@ -124,6 +124,34 @@ export async function analyse() {
 }
 
 // ------------------------------------------------------------ rewriting
+// An exported file opened again: its parked editable layer back in place, or
+// null when the file has none (not an export, or one from before parking).
+export async function unparked(doc) {
+  const info = (await doc.getMetadata().catch(() => null))?.info;
+  // pdf.js does not pass custom Info keys on; the export's Producer and Keywords are standard ones.
+  if (!`${info?.Producer || ''} ${info?.Keywords || ''}`.includes(config.keywords)) return null;
+  const pl = await PDFDocument.load(await doc.getData(), { updateMetadata: false });
+  const N = n => PDFName.of(n);
+  const park = pl.catalog.lookup(N(config.parkKey));
+  if (!(park instanceof PDFDict)) return null;
+  const own = park.lookup(N('PageCount'))?.asNumber?.() ?? pl.getPageCount();
+  while (pl.getPageCount() > own) pl.removePage(pl.getPageCount() - 1);   // pages the overflow moved text to
+  for (const page of pl.getPages()) {
+    const p = page.node.lookup(N(config.parkKey));
+    if (!(p instanceof PDFDict)) continue;
+    for (const k of ['Contents', 'Annots']) {
+      const v = p.get(N(k));
+      if (v) page.node.set(N(k), v); else page.node.delete(N(k));
+    }
+    page.node.delete(N(config.parkKey));
+  }
+  const acro = park.get(N('AcroForm'));
+  if (acro) pl.catalog.set(N('AcroForm'), acro);
+  pl.catalog.delete(N(config.parkKey));
+  for (const k of ['LogbookExported', 'LogbookFields', 'Keywords']) pl.getInfoDict().delete(N(k));
+  return pl.save({ updateFieldAppearances: false });
+}
+
 export async function reopen(bytes) {
   const a = app();
   const page = a.pdfViewer.currentPageNumber;
