@@ -77,11 +77,11 @@ export function askImagePage(preselect) {
   grid.addEventListener('mouseleave', () => show(pick.cols, pick.rows));
   show(1, 1);
   return modal('Add image page', [
-    $('p', { class: 'lb-modal-text' }, 'The images go on a new page at the end, with a box for notes. Choose several images at once to fill the grid.'),
+    $('p', { class: 'lb-modal-text' }, 'A new page is added at the end with empty image boxes and a box for notes. Add images later by pressing Insert image in a box.'),
     $('label', { class: 'lb-field' }, $('span', {}, 'Which exercise is it for?'), select),
     $('div', { class: 'lb-field' }, $('span', {}, 'How many images on the page?'), $('div', { class: 'lb-grid-wrap' }, grid, label))],
     [{ text: 'Cancel', value: null },
-     { text: 'Choose images', primary: true, id: 'lbExerciseOk', value: () => ({ exercise: select.value, ...pick }) }]);
+     { text: 'Add page', primary: true, id: 'lbExerciseOk', value: () => ({ exercise: select.value, ...pick }) }]);
 }
 
 export const askConfirm = (title, text, ok, danger = true) => modal(title, [$('p', { class: 'lb-modal-text' }, text)],
