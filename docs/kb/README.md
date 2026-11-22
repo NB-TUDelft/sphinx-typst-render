@@ -46,13 +46,13 @@ this document" under Rules holds those rules.
 
 **Reference**: standing guidance to read when a task touches its area.
 
-- [Current Architecture](030-reference/010-current-architecture.md) — Layer map: `__init__.py` (`setup()`, the `typst_render_*` config values, event hooks), `_compile.py`, `_directive.py`, `_downloads.py`, `_overview.py`, `_editor.py` with its generated `_editor/` bundle built from `editor/`, `static/` and `fonts/`; the tests, the browser test and the two workflows; the declared console script with no `main` behind it.
+- [Current Architecture](030-reference/010-current-architecture.md) — Layer map: `__init__.py` (`setup()`, the `typst_render_*` config values, event hooks), `_compile.py`, `_directive.py`, `_downloads.py`, `_overview.py`, `_editor.py` with its generated `_editor/` bundle built from `editor/`, `static/` and `fonts/`; the tests, the browser test and the two workflows; no console script (the template's broken one went after 1.1.2).
 - [SonarQube and coverage](030-reference/020-sonarqube-and-coverage.md) — SonarQube project `sphinx-typst-render` (`sonar-project.properties`): plain `sonar-scanner` with host and token from the scanner's own configuration, never an empty `SONAR_TOKEN`, never either recorded here; Python coverage from `pytest --cov`, the editor's from its browser test through V8 and c8 (`pnpm run coverage`), and why c8's `--exclude-after-remap` is not used; what coverage leaves out; `sonar.projectVersion` advances with releases.
 - [Editor code conventions](030-reference/030-editor-code-conventions.md) — Standing guidance from the SonarQube clean-up (`2026-11-22`): independent async work runs together, work that must not overlap goes through `inSequence()` with the reason beside it; `void` only on promises whose function handles its own errors; long functions become named steps, since SonarQube counts nested functions into the outer one; a change to the export is checked against an export made before it (`tools/compare_exports.py`).
 
 **Ongoing work**: what is in progress, in the order to take it up.
 
-- [Work order](040-ongoing-work/010-work-order.md) (*always read*) — The work order (`2026-11-22`): fix the console script with no `main`; in `editor/biome.json`, lint `coverage.mjs` and drop the HTML `tabindex` exemption.
+- [Work order](040-ongoing-work/010-work-order.md) (*always read*) — The work order (`2026-11-22`): in `editor/biome.json`, lint `coverage.mjs` and drop the HTML `tabindex` exemption.
 
 **Future work**: recorded directions nobody has started.
 

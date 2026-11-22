@@ -4,7 +4,7 @@ summary: >-
   event hooks), `_compile.py`, `_directive.py`, `_downloads.py`,
   `_overview.py`, `_editor.py` with its generated `_editor/` bundle built from
   `editor/`, `static/` and `fonts/`; the tests, the browser test and the two
-  workflows; the declared console script with no `main` behind it.
+  workflows; no console script (the template's broken one went after 1.1.2).
 ---
 
 # Current Architecture
@@ -48,7 +48,7 @@ drives the built editor in headless Chromium through Playwright. Workflows:
 request; `editor-test.yml` runs the browser test on pull requests that touch
 the editor.
 
-Known defect (`2026-11-22`): `pyproject.toml` declares a console script,
-`sphinx-typst-render = "sphinx_typst_render:main"`, but the package defines no
-`main`, so the installed command fails with `ImportError`. It is on the work
-order.
+The package declares no console script: it is a Sphinx extension, used
+through `conf.py`. Until 1.1.2 it declared one, left from the project
+template, for a `main` that never existed; `tests/test_metadata.py` loads
+every entry point the package declares, so a broken one fails the tests.
