@@ -60,20 +60,22 @@ function addUp(files, lcov) {
     const file = /^SF:(editor\/src\/.+)$/m.exec(record)?.[1];
     if (!file) continue;
     if (!files.has(file)) files.set(file, { lines: new Map(), branches: new Map(), functions: new Map() });
-    const sum = files.get(file);
-    const branches = new Map(); // line -> [found, hit] in this snapshot
-    const fnLines = new Map(); // name -> line in this snapshot
-    for (const [, kind, data] of record.matchAll(/^(DA|BRDA|FN|FNDA):(.+)$/gm)) {
-      const parts = data.split(',');
-      if (kind === 'DA') sum.lines.set(+parts[0], (sum.lines.get(+parts[0]) ?? 0) + +parts[1]);
-      else if (kind === 'BRDA') {
-        const [found, hit] = branches.get(+parts[0]) ?? [0, 0];
-        branches.set(+parts[0], [found + 1, hit + (+parts[3] > 0 ? 1 : 0)]);
-      } else if (kind === 'FN') fnLines.set(parts.slice(1).join(','), +parts[0]);
-      else bestOf(sum.functions, fnLines.get(parts.slice(1).join(',')), [parts.slice(1).join(','), +parts[0] > 0 ? 1 : 0]);
-    }
-    for (const [line, counts] of branches) bestOf(sum.branches, line, counts);
+    addRecord(files.get(file), record);
   }
+}
+// One file's record from one snapshot, added to that file's sum.
+function addRecord(sum, record) {
+  const entries = [...record.matchAll(/^(DA|BRDA|FN|FNDA):(.+)$/gm)].map(([, kind, data]) => [kind, data.split(',')]);
+  const of = (wanted) => entries.filter(([kind]) => kind === wanted).map(([, parts]) => parts);
+  for (const [line, hits] of of('DA')) sum.lines.set(+line, (sum.lines.get(+line) ?? 0) + +hits);
+  const branches = new Map(); // line -> [found, hit] in this snapshot
+  for (const [line, , , taken] of of('BRDA')) {
+    const [found, hit] = branches.get(+line) ?? [0, 0];
+    branches.set(+line, [found + 1, hit + (+taken > 0 ? 1 : 0)]);
+  }
+  for (const [line, counts] of branches) bestOf(sum.branches, line, counts);
+  const fnLines = new Map(of('FN').map(([line, ...name]) => [name.join(','), +line]));
+  for (const [hits, ...name] of of('FNDA')) bestOf(sum.functions, fnLines.get(name.join(',')), [name.join(','), +hits > 0 ? 1 : 0]);
 }
 // Keep, per line, the snapshot with the most covered.
 function bestOf(map, line, [a, b]) {
@@ -88,12 +90,21 @@ function toLcov(files) {
     const fns = [...functions].sort((p, q) => p[0] - q[0]);
     const brs = [...branches].sort((p, q) => p[0] - q[0]);
     const das = [...lines].sort((p, q) => p[0] - q[0]);
-    out.push('TN:', `SF:${file}`);
-    out.push(...fns.map(([line, [name]]) => `FN:${line},${name}`), ...fns.map(([, [name, hit]]) => `FNDA:${hit},${name}`));
-    out.push(`FNF:${fns.length}`, `FNH:${fns.filter(([, [, hit]]) => hit).length}`);
-    out.push(...das.map(([line, hits]) => `DA:${line},${hits}`), `LF:${das.length}`, `LH:${das.filter(([, hits]) => hits).length}`);
-    out.push(...brs.flatMap(([line, [found, hit]]) => Array.from({ length: found }, (_, i) => `BRDA:${line},0,${i},${i < hit ? 1 : 0}`)));
-    out.push(`BRF:${brs.reduce((n, [, [found]]) => n + found, 0)}`, `BRH:${brs.reduce((n, [, [, hit]]) => n + hit, 0)}`, 'end_of_record');
+    out.push(
+      'TN:',
+      `SF:${file}`,
+      ...fns.map(([line, [name]]) => `FN:${line},${name}`),
+      ...fns.map(([, [name, hit]]) => `FNDA:${hit},${name}`),
+      `FNF:${fns.length}`,
+      `FNH:${fns.filter(([, [, hit]]) => hit).length}`,
+      ...das.map(([line, hits]) => `DA:${line},${hits}`),
+      `LF:${das.length}`,
+      `LH:${das.filter(([, hits]) => hits).length}`,
+      ...brs.flatMap(([line, [found, hit]]) => Array.from({ length: found }, (_, i) => `BRDA:${line},0,${i},${i < hit ? 1 : 0}`)),
+      `BRF:${brs.reduce((n, [, [found]]) => n + found, 0)}`,
+      `BRH:${brs.reduce((n, [, [, hit]]) => n + hit, 0)}`,
+      'end_of_record',
+    );
   }
   return `${out.join('\n')}\n`;
 }
