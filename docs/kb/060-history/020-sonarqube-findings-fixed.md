@@ -1,10 +1,10 @@
 ---
 summary: >-
   Record (`2026-11-22`): after merging `origin/main` (1.1.2), the SonarQube
-  findings went from 133 to 1 in eight signed commits: reliability fixes,
-  mechanical clean-ups, the Python findings, async loops, and the export, hints
-  and wrapping split into named steps; the browser test gained checks 19 to 21;
-  the `tabindex` on the viewer is left for the maintainer.
+  findings went from 133 to none and the gate passed: reliability fixes,
+  mechanical clean-ups, the Python findings, async loops, the export, hints
+  and wrapping split into named steps, and the viewer's `tabindex` dropped at
+  the maintainer's choice; the browser test gained checks 19 to 21.
 ---
 
 # SonarQube findings fixed (`2026-11-22`)
@@ -14,7 +14,7 @@ merged (`8dbb049`), and said the EI_Logbooks editor is discontinued, so the
 editor's code no longer has to stay close to it (Mission).
 
 The scan of the merged tree found 133 open issues: 19 reliability (the gate
-allows none) and 125 maintainability (it allows 100). In order:
+allows none) and 125 maintainability (it allows 100). In nine signed commits:
 
 1. `9f68b81`: the reliability findings: `replaceAll`, `Number.*`, `void` on
    promises nobody waits for, and the DA string read with a tokenizer instead
@@ -34,13 +34,14 @@ allows none) and 125 maintainability (it allows 100). In order:
 The conventions these settled are in Editor code conventions, under
 Reference.
 
+8. `0bb7961`: the last finding, `Web:S6845` on the `tabindex` of
+   `#viewerContainer` in `viewer.html`, pdf.js's keyboard-scrollable region.
+   Offered accepting it on the server or dropping the attribute, the
+   maintainer chose to drop it. In Chromium, clicking the page area and
+   pressing PageDown scrolls as far as before and the Tab order is unchanged;
+   Safari may not make a scrolling region focusable on its own.
+
 **Checks.** pytest 52 passed, 1 skipped, at every step; the browser test
 passed every check at every step, 27 by the end; editor coverage rose from
-78.7% to 83.0% of lines. The last scan left one issue, the gate red on it
-alone: every new-code condition passed (85.2% coverage on new code).
-
-**Left open.** Reliability finding `Web:S6845` on the `tabindex` of
-`#viewerContainer` in `viewer.html`. It is pdf.js's keyboard-scrollable
-region, and `editor/biome.json` already exempts the same rule; whether to
-accept it on the server or drop the `tabindex` is the maintainer's call
-(work order).
+78.7% to 83.0% of lines. The last scan found no open issues, and the gate
+passed.

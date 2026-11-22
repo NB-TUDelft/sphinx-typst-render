@@ -52,7 +52,7 @@ this document" under Rules holds those rules.
 
 **Ongoing work**: what is in progress, in the order to take it up.
 
-- [Work order](040-ongoing-work/010-work-order.md) (*always read*) — The work order (`2026-11-22`): decide on the one SonarQube finding left, the viewer's `tabindex`; fix the console script with no `main`; decide on the unmerged `claude/editor-test-gradient`; add `editor/coverage.mjs` to Biome's files.
+- [Work order](040-ongoing-work/010-work-order.md) (*always read*) — The work order (`2026-11-22`): fix the console script with no `main`; decide on the unmerged `claude/editor-test-gradient`; in `editor/biome.json`, lint `coverage.mjs` and drop the HTML `tabindex` exemption.
 
 **Future work**: recorded directions nobody has started.
 
@@ -62,6 +62,6 @@ this document" under Rules holds those rules.
 **History**: dated records of finished work, oldest first.
 
 - [SonarQube and a knowledge base (`2026-11-22`)](060-history/010-sonarqube-and-a-knowledge-base.md) — Record (`2026-11-22`): SonarQube analysis set up, with Python coverage and the editor's coverage from its browser test, and this knowledge base started, its index script in Python and checked by the test suite; the checks run, the first two scans, and what was left open.
-- [SonarQube findings fixed (`2026-11-22`)](060-history/020-sonarqube-findings-fixed.md) — Record (`2026-11-22`): after merging `origin/main` (1.1.2), the SonarQube findings went from 133 to 1 in eight signed commits: reliability fixes, mechanical clean-ups, the Python findings, async loops, and the export, hints and wrapping split into named steps; the browser test gained checks 19 to 21; the `tabindex` on the viewer is left for the maintainer.
+- [SonarQube findings fixed (`2026-11-22`)](060-history/020-sonarqube-findings-fixed.md) — Record (`2026-11-22`): after merging `origin/main` (1.1.2), the SonarQube findings went from 133 to none and the gate passed: reliability fixes, mechanical clean-ups, the Python findings, async loops, the export, hints and wrapping split into named steps, and the viewer's `tabindex` dropped at the maintainer's choice; the browser test gained checks 19 to 21.
 
 <!-- kb-index:end -->
