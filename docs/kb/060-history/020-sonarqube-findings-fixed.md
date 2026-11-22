@@ -30,16 +30,15 @@ allows none) and 125 maintainability (it allows 100). In nine signed commits:
 7. `c41a9ec` and `8109a77`: the export (complexity 149), the live hints and
    line wrapping, split into named steps; the export checked identical to one
    made before, but for the photo's insertion time.
-
-The conventions these settled are in Editor code conventions, under
-Reference.
-
 8. `0bb7961`: the last finding, `Web:S6845` on the `tabindex` of
    `#viewerContainer` in `viewer.html`, pdf.js's keyboard-scrollable region.
    Offered accepting it on the server or dropping the attribute, the
    maintainer chose to drop it. In Chromium, clicking the page area and
    pressing PageDown scrolls as far as before and the Tab order is unchanged;
    Safari may not make a scrolling region focusable on its own.
+
+The conventions these settled are in Editor code conventions, under
+Reference.
 
 **Checks.** pytest 52 passed, 1 skipped, at every step; the browser test
 passed every check at every step, 27 by the end; editor coverage rose from
