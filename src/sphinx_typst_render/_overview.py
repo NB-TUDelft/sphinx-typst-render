@@ -127,21 +127,9 @@ def _blocks(entries: list[dict]) -> list[list[dict]]:
     return list(blocks.values())
 
 
-def render(app, docname: str, node: overview) -> str:
-    """The overview as HTML, its links relative to ``docname``."""
+def _cards(app, docname: str, node: overview, url) -> tuple[dict[str, list[str]], list[str]]:
+    """Every rendered document's cards, grouped under their parent page, and the highlighted ones."""
     env, builder = app.env, app.builder
-    here = builder.get_target_uri(docname)
-    to_root = "../" * here.count("/")
-
-    def pathto(uri: str, resource: bool = False) -> str:
-        return to_root + uri
-
-    def url(entry: dict) -> str:
-        if entry.get("kind") == "editor":
-            # The editor's Back link returns here, where the student came from.
-            return _editor.link(pathto, entry["uri"], here)
-        return to_root + entry["uri"]
-
     store = _downloads._store(env)
     relations = env.collect_relations()
     # Reading order: the table of contents, then any page outside it.
@@ -158,7 +146,24 @@ def render(app, docname: str, node: overview) -> str:
             groups.setdefault(group, []).append(card)
             if (block[0].get("title") or block[0]["label"]) in node["highlight"]:
                 highlighted.append(card)
+    return groups, highlighted
 
+
+def render(app, docname: str, node: overview) -> str:
+    """The overview as HTML, its links relative to ``docname``."""
+    here = app.builder.get_target_uri(docname)
+    to_root = "../" * here.count("/")
+
+    def pathto(uri: str, resource: bool = False) -> str:
+        return to_root + uri
+
+    def url(entry: dict) -> str:
+        if entry.get("kind") == "editor":
+            # The editor's Back link returns here, where the student came from.
+            return _editor.link(pathto, entry["uri"], here)
+        return to_root + entry["uri"]
+
+    groups, highlighted = _cards(app, docname, node, url)
     if not groups:
         return '<div class="typst-overview"><p class="typst-overview-empty">Nothing to list yet.</p></div>'
     parts = ['<div class="typst-overview">']

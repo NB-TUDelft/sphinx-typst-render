@@ -153,30 +153,28 @@ def _apply_field_lengths(writer, max_length: int) -> None:
 
     Only text fields are touched. A cap on a checkbox would be meaningless.
     """
+    seen: set[int] = set()
+    annots = [annot for page in writer.pages for annot in page.get("/Annots", []) or []]
+    acroform = writer._root_object.get("/AcroForm")
+    fields = (acroform.get("/Fields", []) or []) if acroform else []
+    for ref in annots + list(fields):
+        _cap_text_field(ref.get_object(), max_length, seen)
+
+
+def _cap_text_field(obj, max_length: int, seen: set[int]) -> None:
+    """Set or remove one field's character cap, then its kids' (each object once)."""
     from pypdf.generic import NameObject, NumberObject
 
-    seen: set[int] = set()
-
-    def apply(obj) -> None:
-        if obj is None or id(obj) in seen:
-            return
-        seen.add(id(obj))
-        if obj.get("/FT") == "/Tx":
-            if max_length > 0:
-                obj[NameObject(MAX_LEN)] = NumberObject(max_length)
-            elif MAX_LEN in obj:
-                del obj[MAX_LEN]
-        for kid in obj.get("/Kids", []) or []:
-            apply(kid.get_object())
-
-    for page in writer.pages:
-        for annot in page.get("/Annots", []) or []:
-            apply(annot.get_object())
-
-    acroform = writer._root_object.get("/AcroForm")
-    if acroform:
-        for field in acroform.get("/Fields", []) or []:
-            apply(field.get_object())
+    if obj is None or id(obj) in seen:
+        return
+    seen.add(id(obj))
+    if obj.get("/FT") == "/Tx":
+        if max_length > 0:
+            obj[NameObject(MAX_LEN)] = NumberObject(max_length)
+        elif MAX_LEN in obj:
+            del obj[MAX_LEN]
+    for kid in obj.get("/Kids", []) or []:
+        _cap_text_field(kid.get_object(), max_length, seen)
 
 
 def _copy_outline(reader, writer) -> None:
@@ -187,28 +185,31 @@ def _copy_outline(reader, writer) -> None:
     as the bookmark panel, and the editor reads each entry's page and height
     to tag an inserted image with the section it belongs to.
     """
+    _copy_outline_items(reader, writer, reader.outline)
+
+
+def _copy_outline_items(reader, writer, items, parent=None) -> None:
+    last = None
+    for item in items:
+        if isinstance(item, list):  # the children of the entry before it
+            if last is not None:
+                _copy_outline_items(reader, writer, item, last)
+            continue
+        page = reader.get_destination_page_number(item)
+        if page is not None and 0 <= page < len(writer.pages):
+            last = writer.add_outline_item(item.title, page, parent=parent, fit=_outline_fit(item))
+
+
+def _outline_fit(item):
+    """Where a bookmark lands: the same spot for /XYZ (page, height, zoom), else the whole page."""
     from pypdf.generic import Fit, NullObject
 
     def number(value):
         return None if value is None or isinstance(value, NullObject) else float(value)
 
-    def copy(items, parent=None) -> None:
-        last = None
-        for item in items:
-            if isinstance(item, list):  # the children of the entry before it
-                if last is not None:
-                    copy(item, last)
-                continue
-            page = reader.get_destination_page_number(item)
-            if page is None or not 0 <= page < len(writer.pages):
-                continue
-            if item.typ == "/XYZ":
-                fit = Fit.xyz(left=number(item.left), top=number(item.top), zoom=number(item.zoom))
-            else:
-                fit = Fit.fit()
-            last = writer.add_outline_item(item.title, page, parent=parent, fit=fit)
-
-    copy(reader.outline)
+    if item.typ == "/XYZ":
+        return Fit.xyz(left=number(item.left), top=number(item.top), zoom=number(item.zoom))
+    return Fit.fit()
 
 
 def _add_form_fields(base: bytes, request: RenderRequest) -> bytes:
