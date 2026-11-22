@@ -15,6 +15,9 @@
 //
 // Run with `pnpm run build`. The folder is generated: it is deleted and
 // written again on every run, and git ignores it.
+//
+// `node build.mjs --coverage` builds for coverage.mjs instead: unminified,
+// with source maps that lead back to src/. That build must never ship.
 import { build, transform } from 'esbuild';
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -25,6 +28,7 @@ const root = path.resolve(here, '..');
 const out = path.join(root, 'src', 'sphinx_typst_render', '_editor');
 const nodeModule = name => path.join(here, 'node_modules', name);
 const pdfjs = nodeModule('pdfjs-dist');
+const coverage = process.argv.includes('--coverage');
 
 const pyproject = await readFile(path.join(root, 'pyproject.toml'), 'utf8');
 const version = pyproject.match(/^version\s*=\s*"([^"]+)"/m)[1];
@@ -42,7 +46,8 @@ const { metafile } = await build({
   format: 'esm',
   splitting: true,
   chunkNames: 'chunks/[name]-[hash]',
-  minify: true,
+  minify: !coverage,
+  sourcemap: coverage ? 'linked' : false,
   target: ['es2022'],
   legalComments: 'eof',
   metafile: true,
@@ -61,9 +66,7 @@ await cp(path.join(pdfjs, 'build', 'pdf.worker.min.mjs'), path.join(out, 'pdf.wo
 await mkdir(path.join(out, 'pdfjs'));
 await minifyCss(path.join(pdfjs, 'web', 'pdf_viewer.css'), path.join(out, 'pdfjs', 'pdf_viewer.css'));
 await cp(path.join(pdfjs, 'web', 'images'), path.join(out, 'pdfjs', 'images'), { recursive: true });
-for (const dir of ['cmaps', 'iccs', 'standard_fonts']) {
-  await cp(path.join(pdfjs, dir), path.join(out, 'pdfjs', dir), { recursive: true });
-}
+await Promise.all(['cmaps', 'iccs', 'standard_fonts'].map(dir => cp(path.join(pdfjs, dir), path.join(out, 'pdfjs', dir), { recursive: true })));
 await cp(path.join(pdfjs, 'wasm'), path.join(out, 'pdfjs', 'wasm'), {
   recursive: true,
   filter: src => !path.basename(src).toLowerCase().includes('quickjs'),
@@ -86,17 +89,17 @@ const packages = new Map([
   ['@fontsource-variable/inter', nodeModule('@fontsource-variable/inter')],
 ]);
 for (const input of Object.keys(metafile.inputs)) {
-  const m = input.match(/^(.*node_modules\/((?:@[^/]+\/)?[^/]+))\//);
+  const m = /^(.*node_modules\/((?:@[^/]+\/)?[^/]+))\//.exec(input);
   if (m) packages.set(m[2], path.resolve(here, m[1]));
 }
-const sections = [];
-for (const [name, dir] of [...packages].sort(([a], [b]) => a.localeCompare(b))) {
+async function licenceSection([name, dir]) {
   const meta = JSON.parse(await readFile(path.join(dir, 'package.json'), 'utf8'));
   const file = (await readdir(dir)).find(f => /^(licen[cs]e|copying)/i.test(f));
   const text = file ? (await readFile(path.join(dir, file), 'utf8')).trim() : '(the package has no licence file)';
   const rule = '='.repeat(78);
-  sections.push(`${rule}\n${name} ${meta.version}\nLicense: ${meta.license}\n${rule}\n\n${text}\n`);
+  return `${rule}\n${name} ${meta.version}\nLicense: ${meta.license}\n${rule}\n\n${text}\n`;
 }
+const sections = await Promise.all([...packages].sort(([a], [b]) => a.localeCompare(b)).map(licenceSection));
 await writeFile(path.join(out, 'THIRD_PARTY_LICENSES.txt'),
   'Third-party software in the sphinx-typst-render editor.\n'
   + 'The data files in pdfjs/cmaps, pdfjs/iccs, pdfjs/standard_fonts and pdfjs/wasm\n'
@@ -106,11 +109,12 @@ await writeFile(path.join(out, 'THIRD_PARTY_LICENSES.txt'),
 async function size(p) {
   const s = await stat(p);
   if (!s.isDirectory()) return s.size;
-  let total = 0;
-  for (const f of await readdir(p)) total += await size(path.join(p, f));
-  return total;
+  const sizes = await Promise.all((await readdir(p)).map(f => size(path.join(p, f))));
+  return sizes.reduce((total, n) => total + n, 0);
 }
-const mb = n => (n / 1024 / 1024).toFixed(2) + ' MB';
-for (const f of (await readdir(out)).sort()) console.log(`${mb(await size(path.join(out, f))).padStart(9)}  ${f}`);
+const mb = n => `${(n / 1024 / 1024).toFixed(2)} MB`;
+const written = (await readdir(out)).sort();
+const writtenSizes = await Promise.all(written.map(f => size(path.join(out, f))));
+for (const [i, f] of written.entries()) console.log(`${mb(writtenSizes[i]).padStart(9)}  ${f}`);
 console.log(`${mb(await size(out)).padStart(9)}  total, editor ${version}, pdf.js `
   + JSON.parse(await readFile(path.join(pdfjs, 'package.json'), 'utf8')).version);

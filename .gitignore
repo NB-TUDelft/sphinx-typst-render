@@ -16,3 +16,8 @@ __pycache__/
 
 # Screenshots and reports from tools/editor_test.py
 /editor-test/
+
+# SonarQube scanner work dir and the coverage it reads (sonar-project.properties)
+.scannerwork/
+.coverage
+coverage.xml

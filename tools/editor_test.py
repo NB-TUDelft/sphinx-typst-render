@@ -11,6 +11,9 @@ Needs the editor bundle built (`pnpm run check` in editor/) plus playwright
 and pypdf in the Python environment. Locally set CHROMIUM_PATH to a Chromium
 binary if Playwright's own browser is not installed; on GitHub the
 editor-test workflow installs it.
+
+With EDITOR_COVERAGE set to a folder it also saves the editor's V8 coverage
+there, for `pnpm run coverage` in editor/ (see editor/coverage.mjs).
 """
 
 import base64
@@ -56,6 +59,7 @@ Photo:
 
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
+        # No request log: the output stays the list of checks.
         pass
 
 
@@ -130,6 +134,43 @@ def field_value(pg, name):
     return pg.evaluate(f"document.querySelector('[name={name}]')?.value")
 
 
+class Coverage:
+    """The editor's V8 coverage, when EDITOR_COVERAGE names a folder.
+
+    Each save() writes what ran since the last one, in the format c8 reads
+    (that of NODE_V8_COVERAGE). The served URLs become the bundle files they
+    were copied from, so c8 can follow their source maps back to editor/src/.
+    Save before every navigation: a page's counts go with it.
+    """
+
+    def __init__(self, ctx, pg, served, assets):
+        folder = os.environ.get("EDITOR_COVERAGE")
+        self.dir = Path(folder) if folder else None
+        if not self.dir:
+            return
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.served, self.assets, self.saved = served, assets, 0
+        self.cdp = ctx.new_cdp_session(pg)
+        self.cdp.send("Profiler.enable")
+        self.cdp.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+
+    def save(self):
+        if not self.dir:
+            return
+        result = []
+        for script in self.cdp.send("Profiler.takePreciseCoverage")["result"]:
+            url = script["url"].split("?")[0]
+            if not url.startswith(self.served):
+                continue
+            # config.js is written per site and has no counterpart here.
+            file = self.assets / url[len(self.served):]
+            if file.suffix == ".js" and file.is_file():
+                result.append({**script, "url": file.as_uri()})
+        self.saved += 1
+        (self.dir / f"editor-{os.getpid()}-{self.saved}.json").write_text(
+            json.dumps({"result": result}), encoding="utf-8")
+
+
 def run_suite():
     from sphinx_typst_render import _editor
     if not _editor.available():
@@ -166,6 +207,7 @@ def run_suite():
             try:
                 ctx = browser.new_context(viewport={"width": 1300, "height": 1000}, accept_downloads=True)
                 pg = ctx.new_page()
+                cov = Coverage(ctx, pg, f"{base}/{_editor.URI_PREFIX}/", _editor.ASSETS)
                 pg.on("console", lambda m: console_errors.append(m.text) if m.type == "error" else None)
 
                 # Fill the worksheet and put a photo in the image box.
@@ -235,6 +277,7 @@ def run_suite():
 
                 # Open the export as a fresh file: the editable layer comes back.
                 (out / "reopen_export.pdf").write_bytes(exp)
+                cov.save()
                 pg.goto(f"{base}/_static/typst-editor/viewer.html?file=../../reopen_export.pdf")
                 wait_editor(pg)
                 toasts = pg.evaluate("[...document.querySelectorAll('.lb-toast')].map(t => t.innerText)")
@@ -262,6 +305,7 @@ def run_suite():
                 # not easily missed (1.5x the normal size).
                 set_field(pg, "name", short_answer + "!")
                 pg.evaluate("window.typstRenderEditor.autosaveNow(true).then(() => true)")
+                cov.save()
                 pg.reload()
                 wait_editor(pg)
                 pg.wait_for_selector("#lbRestoreYes", state="attached", timeout=30000)
@@ -276,11 +320,17 @@ def run_suite():
                 record("16_no_reopen_errors",
                        not any("could not reopen" in e for e in console_errors),
                        "; ".join(console_errors) or "no console errors")
+                cov.save()
                 ctx.close()
             finally:
                 browser.close()
                 httpd.shutdown()
 
+    return write_report(states)
+
+
+def write_report(states):
+    """Write report.md beside the screenshots; return 0 if every check passed, else 1."""
     lines = [f"# Editor Test Report ({TODAY})", "", "| State | Result | Note |", "|---|---|---|"]
     lines += [f"| `{name}` | **{res}** | {note} |" for name, res, note in states]
     (OUT_DIR / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")

@@ -35,10 +35,15 @@ they must agree:
 $EDITOR pyproject.toml                        # version = "0.2.1"
 $EDITOR src/sphinx_typst_render/__init__.py   # __version__ = "0.2.1"
 uv lock                                       # refreshes the project version
+$EDITOR sonar-project.properties              # sonar.projectVersion=0.2.1
 git commit -am "Release 0.2.1"
 git tag v0.2.1
 git push origin main v0.2.1
 ```
+
+Nothing checks `sonar.projectVersion`, but SonarQube's "Previous version"
+new-code period starts at the analysis where it last changed. If it lags, new
+code is measured against an older release.
 
 Open a pull request first. On every PR the workflow runs in **dry-run mode**,
 building and checking everything and uploading nothing. That is the rehearsal,

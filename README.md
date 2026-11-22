@@ -370,6 +370,31 @@ workflow runs it on pull requests that touch `editor/`; run it locally with
 `python tools/editor_test.py` after `pnpm run check`, with `playwright` and
 `pypdf` installed.
 
+## Code analysis
+
+SonarQube analyses the Python package and the editor's source
+(`sonar-project.properties`). Scan the finished working tree, before
+committing, with fresh coverage from both test suites:
+
+```bash
+uv run pytest --cov --cov-report=xml   # coverage.xml
+(cd editor && pnpm run coverage)       # the browser test: editor/coverage/lcov.info
+sonar-scanner
+```
+
+`sonar-scanner` takes the server address and token from its own configuration
+(`$SONAR_SCANNER_HOME/conf/sonar-scanner.properties`); neither belongs in this
+repository. Never set an empty `SONAR_TOKEN`: it overrides the configured
+token, and the scan fails with `401 Unauthorized`. How the editor's coverage
+is measured, and what is left out of coverage, is in the knowledge base.
+
+## Maintaining
+
+Guidance for maintainers and coding agents lives in the knowledge base,
+[docs/kb/README.md](docs/kb/README.md): how to work in this repository, the
+architecture, the work order, and a record of finished work. Releases follow
+[RELEASING.md](RELEASING.md).
+
 ## Licence
 
 GNU Affero General Public License v3.0 or later, see [LICENSE](LICENSE).
