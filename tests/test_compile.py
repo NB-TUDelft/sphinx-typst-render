@@ -79,8 +79,9 @@ def test_option_variants_do_not_clobber(tmp_path: Path) -> None:
 
 
 def test_page_out_of_range_raises(tmp_path: Path) -> None:
+    request = _request(tmp_path, DOUBLE, preview_page=9)
     with pytest.raises(IndexError):
-        render(_request(tmp_path, DOUBLE, preview_page=9), tmp_path)
+        render(request, tmp_path)
 
 
 def _font_names(pdf: Path) -> set[str]:
@@ -258,5 +259,6 @@ def test_fillable_pdf_keeps_bookmarks(tmp_path: Path) -> None:
     assert reader.get_destination_page_number(first) == 0
     assert reader.get_destination_page_number(second) == 1
     # The height on the page, which places an image under the right heading.
-    assert first.typ == "/XYZ" and first.top is not None
+    assert first.typ == "/XYZ"
+    assert first.top is not None
 

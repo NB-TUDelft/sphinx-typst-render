@@ -107,7 +107,6 @@ export function attachHints(pageNumber) {
       const el = pv.div.querySelector(`.annotationLayer [data-element-id="${f.id}"]`);
       if (!el || el.dataset.lbHint) continue;
       el.dataset.lbHint = '1';
-      const section = el.parentElement;
       let mirror = null, hint = null, sbWidth = 0;
       // Sizes and positions as calc(... * var(--total-scale-factor)), like pdf.js's
       // own, so they follow the zoom without being set again.

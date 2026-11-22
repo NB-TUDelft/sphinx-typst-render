@@ -96,15 +96,15 @@ def uses_editor(env) -> bool:
     return any(entry.get("kind") == "editor" for entries in _store(env).values() for entry in entries)
 
 
-def purge_doc(app, env, docname: str) -> None:
+def purge_doc(_app, env, docname: str) -> None:
     _store(env).pop(docname, None)
 
 
-def merge_info(app, env, docnames, other) -> None:
+def merge_info(_app, env, _docnames, other) -> None:
     _store(env).update(_store(other))
 
 
-def add_download_buttons(app, pagename, templatename, context, doctree) -> None:
+def add_download_buttons(app, pagename, _templatename, context, _doctree) -> None:
     """Append this page's worksheets to the theme's download dropdown.
 
     Runs after sphinx-book-theme has built ``header_buttons`` (priority 501),

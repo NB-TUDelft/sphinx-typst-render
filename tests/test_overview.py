@@ -71,7 +71,8 @@ def test_cards_follow_the_book_grouped_by_section(tmp_path: Path) -> None:
     assert re.fullmatch(r"\.\./_downloads/typst/\w+/divider\.pdf", divider["href"])
     page_link, source_link = divider["more"]
     assert page_link == ("Voltage divider", "../week1/divider.html")
-    assert source_link[0] == "Source" and source_link[1].endswith("/divider.typ")
+    assert source_link[0] == "Source"
+    assert source_link[1].endswith("/divider.typ")
     # Every link resolves to a file the build wrote.
     misc = tmp_path / "out" / "misc"
     for href in (divider["href"], page_link[1], source_link[1]):

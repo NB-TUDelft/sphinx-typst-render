@@ -42,6 +42,7 @@ REPO = Path(__file__).resolve().parent.parent
 TODAY = datetime.now().strftime("%Y-%m-%d")
 OUT_DIR = REPO / "editor-test" / TODAY
 PARK_KEY = "/FORMEditable"  # default label_prefix, see editor/src/config.js
+PAGE_COUNT_JS = "window.typstRenderEditor.state().pageInfo.length"
 
 SHEET = """\
 #import "/_typst_lib/capture_field.typ": capture_field, text_field, textarea_field
@@ -248,7 +249,7 @@ def run_suite():
                 }""", base64.b64encode(png_path.read_bytes()).decode())
                 time.sleep(2)
                 pg.click("#lbToolSelect")
-                pages_before = pg.evaluate("window.typstRenderEditor.state().pageInfo.length")
+                pages_before = pg.evaluate(PAGE_COUNT_JS)
                 snap(pg, "01_filled")
 
                 # Export, moving the overflow to an extra page.
@@ -282,7 +283,7 @@ def run_suite():
                 wait_editor(pg)
                 toasts = pg.evaluate("[...document.querySelectorAll('.lb-toast')].map(t => t.innerText)")
                 record("08_reopen_toast", any("Opened your exported" in t for t in toasts), str(toasts))
-                pages_now = pg.evaluate("window.typstRenderEditor.state().pageInfo.length")
+                pages_now = pg.evaluate(PAGE_COUNT_JS)
                 record("09_overflow_page_removed_on_reopen", pages_now == pages_before,
                        f"{len(r.pages)} -> {pages_now} pages")
                 record("10_short_answer_back", field_value(pg, "name") == short_answer,
@@ -329,7 +330,7 @@ def run_suite():
                     window.typstRenderEditor.setTestFile('etImagePageFile');
                 }""")
                 pg.set_input_files("#etImagePageFile", str(png_path))
-                pages_before_image_page = pg.evaluate("window.typstRenderEditor.state().pageInfo.length")
+                pages_before_image_page = pg.evaluate(PAGE_COUNT_JS)
                 pg.click("#lbInsertImagePage")
                 pg.wait_for_selector("#lbExerciseOk", state="visible")
                 pg.click("#lbExerciseOk")  # default 1 x 1 grid for Exercise 1

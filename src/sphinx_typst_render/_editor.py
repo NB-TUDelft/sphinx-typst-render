@@ -24,6 +24,7 @@ ASSETS = Path(__file__).parent / "_editor"
 
 #: Where the bundle goes, below the HTML output root.
 URI_PREFIX = "_static/typst-editor"
+HEAD_END = "</head>"
 VIEWER = f"{URI_PREFIX}/viewer.html"
 
 #: From the viewer page back up to the output root.
@@ -121,10 +122,10 @@ def _add_favicon(page: Path, config) -> None:
     if url is None:
         return
     text = page.read_text(encoding="utf-8")
-    if 'rel="icon"' in text or "</head>" not in text:
+    if 'rel="icon"' in text or HEAD_END not in text:
         return
     link = f'  <link rel="icon" href="{escape(url, quote=True)}">\n'
-    page.write_text(text.replace("</head>", link + "</head>", 1), encoding="utf-8")
+    page.write_text(text.replace(HEAD_END, link + HEAD_END, 1), encoding="utf-8")
 
 
 def install(app) -> Path:

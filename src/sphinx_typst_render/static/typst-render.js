@@ -11,7 +11,7 @@
   var OURS = ".btn-typst-download";
   var MARK = "data-typst-headed";
 
-  function addHeader(menu, before, text) {
+  function addHeader(before, text) {
     if (!text || !before) return;
     var item = document.createElement("li");
     var heading = document.createElement("h6");
@@ -36,8 +36,8 @@
       var firstOfTheirs = items.find(function (li) { return !li.querySelector(OURS); });
       menu.setAttribute(MARK, "");
       // Insert the lower header first so the reference node stays valid.
-      addHeader(menu, ours[0], labels.downloads);
-      addHeader(menu, firstOfTheirs, labels.source);
+      addHeader(ours[0], labels.downloads);
+      addHeader(firstOfTheirs, labels.source);
     });
   }
 

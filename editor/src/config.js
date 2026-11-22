@@ -16,7 +16,7 @@ function sameSite(url) {
   try {
     const u = new URL(url, location.href);
     return u.origin === location.origin && /^https?:$/.test(u.protocol) ? u.href : null;
-  } catch (_) {
+  } catch {
     return null; // not a URL at all
   }
 }

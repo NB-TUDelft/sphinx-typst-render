@@ -11,6 +11,8 @@ import typst
 
 #: Directory, relative to the Typst root, where the field helper is staged.
 LIB_DIRNAME = "_typst_lib"
+MAX_LEN = "/MaxLen"
+METADATA = "/Metadata"
 
 #: Directory, beside each source, holding generated output.
 OUT_DIRNAME = "_typst"
@@ -73,7 +75,7 @@ def stage_field_library(root: Path) -> Path | None:
         from importlib.resources import files
 
         data = (files("typst_fillable") / "typst" / LIB_FILENAME).read_bytes()
-    except (ImportError, FileNotFoundError, ModuleNotFoundError):
+    except (ImportError, FileNotFoundError):
         return None
 
     target = root / LIB_DIRNAME / LIB_FILENAME
@@ -161,9 +163,9 @@ def _apply_field_lengths(writer, max_length: int) -> None:
         seen.add(id(obj))
         if obj.get("/FT") == "/Tx":
             if max_length > 0:
-                obj[NameObject("/MaxLen")] = NumberObject(max_length)
-            elif "/MaxLen" in obj:
-                del obj["/MaxLen"]
+                obj[NameObject(MAX_LEN)] = NumberObject(max_length)
+            elif MAX_LEN in obj:
+                del obj[MAX_LEN]
         for kid in obj.get("/Kids", []) or []:
             apply(kid.get_object())
 
@@ -244,9 +246,9 @@ def _add_form_fields(base: bytes, request: RenderRequest) -> bytes:
     # Keep the document's metadata instead of ReportLab's "untitled" defaults.
     # Replace the info dictionary so absent values do not inherit overlay data.
     writer.metadata = reader.metadata
-    if "/Metadata" in reader.trailer["/Root"]:
-        writer.root_object[NameObject("/Metadata")] = (
-            reader.trailer["/Root"].raw_get("/Metadata").clone(writer)
+    if METADATA in reader.trailer["/Root"]:
+        writer.root_object[NameObject(METADATA)] = (
+            reader.trailer["/Root"].raw_get(METADATA).clone(writer)
         )
     if reader.metadata and reader.metadata.title:
         writer.create_viewer_preferences()[NameObject("/DisplayDocTitle")] = (

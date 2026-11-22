@@ -98,15 +98,15 @@ class TypstOverviewDirective(SphinxDirective):
         return [node]
 
 
-def purge_doc(app, env, docname: str) -> None:
+def purge_doc(_app, env, docname: str) -> None:
     _docs(env).discard(docname)
 
 
-def merge_info(app, env, docnames, other) -> None:
+def merge_info(_app, env, _docnames, other) -> None:
     _docs(env).update(_docs(other))
 
 
-def outdated(app, env, added, changed, removed) -> list[str]:
+def outdated(_app, env, added, changed, removed) -> list[str]:
     """Rebuild the overview pages whenever any page changed, so they stay current."""
     if added or changed or removed:
         return sorted(_docs(env) - set(removed))
@@ -240,7 +240,8 @@ def _card(block: list[dict], url, page_title: str, page_url: str) -> str:
 
 
 def resolve(app, doctree, docname: str) -> None:
-    for node in list(doctree.findall(overview)):
+    matches = list(doctree.findall(overview))  # a copy: the loop replaces the nodes it finds
+    for node in matches:
         if getattr(app.builder, "format", None) == "html":
             node.replace_self(nodes.raw("", render(app, docname, node), format="html"))
         else:
