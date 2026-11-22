@@ -14,9 +14,7 @@ from sphinx.application import Sphinx
 
 from sphinx_typst_render import _editor
 
-editor_built = pytest.mark.skipif(
-    not _editor.available(), reason="editor bundle not built (pnpm run build in editor/)"
-)
+editor_built = pytest.mark.skipif(not _editor.available(), reason="editor bundle not built (pnpm run build in editor/)")
 
 PAGES = {
     "index.rst": "Book\n====\n\n.. toctree::\n\n   week1/index\n   week2/index\n   misc/logbooks\n",
@@ -43,8 +41,16 @@ def _project(tmp_path: Path, conf: str) -> Path:
 
 def _build(src: Path, tmp_path: Path, *, fresh: bool = True) -> str:
     out = tmp_path / "out"
-    app = Sphinx(str(src), str(src), str(out), str(tmp_path / "doctrees"), "html",
-                 status=None, warning=io.StringIO(), freshenv=fresh)
+    app = Sphinx(
+        str(src),
+        str(src),
+        str(out),
+        str(tmp_path / "doctrees"),
+        "html",
+        status=None,
+        warning=io.StringIO(),
+        freshenv=fresh,
+    )
     app.build()
     return (out / "misc" / "logbooks.html").read_text(encoding="utf-8")
 
@@ -54,9 +60,14 @@ def _cards(page: str) -> list[dict]:
     cards = []
     for item in re.findall(r'<li class="typst-overview-item">(.*?)</li>', page, re.S):
         main = re.search(r'class="typst-overview-open" href="([^"]*)"[^>]*>(.*?)</a>', item)
-        more = re.findall(r'<a href="([^"]*)">(.*?)</a>', item.split('typst-overview-more', 1)[1])
-        cards.append({"title": main.group(2), "href": html.unescape(main.group(1)),
-                      "more": [(text, html.unescape(href)) for href, text in more]})
+        more = re.findall(r'<a href="([^"]*)">(.*?)</a>', item.split("typst-overview-more", 1)[1])
+        cards.append(
+            {
+                "title": main.group(2),
+                "href": html.unescape(main.group(1)),
+                "more": [(text, html.unescape(href)) for href, text in more],
+            }
+        )
     return cards
 
 
@@ -99,7 +110,7 @@ def test_the_overview_follows_changes_on_other_pages(tmp_path: Path) -> None:
     mole.write_text(PAGES["week2/mole.rst"].replace("Entry 2.1", "Entry 2.9"))
     later = time.time() + 10
     os.utime(mole, (later, later))
-    page = _build(src, tmp_path, fresh=False)        # incremental: only mole.rst changed
+    page = _build(src, tmp_path, fresh=False)  # incremental: only mole.rst changed
     assert [card["title"] for card in _cards(page)] == ["Entry 1.1", "Entry 1.2", "Entry 2.9"]
 
 
@@ -113,7 +124,8 @@ def test_a_weekly_box_per_group_from_the_first_day(tmp_path: Path) -> None:
     boxes = re.findall(
         r'<section class="typst-overview-highlight" data-from="([\d-]+)" data-until="([\d-]+)" hidden>'
         r'\s*<h2 class="typst-overview-group">(.*?)</h2>(.*?)</section>',
-        page, re.S,
+        page,
+        re.S,
     )
     assert [(begin, end, title) for begin, end, title, _ in boxes] == [
         ("2026-11-21", "2026-11-28", "This week"),

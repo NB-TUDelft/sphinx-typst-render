@@ -86,20 +86,14 @@ class TypstDirective(SphinxDirective):
             fillable="fillable" in self.options,
             ppi=self.options.get("ppi", config.typst_render_ppi),
             preview_page=self.options.get("page", 1),
-            max_length=self.options.get(
-                "max-length", config.typst_render_field_max_length
-            ),
+            max_length=self.options.get("max-length", config.typst_render_field_max_length),
         )
 
         # An inline preview has to be an image Sphinx can see, which means it
         # must live under the source directory. With no inline block there is
         # nothing to keep there, so the output goes to a build local cache and
         # the author's folders stay clean.
-        basedir = (
-            source.parent
-            if inline
-            else Path(self.env.doctreedir).parent / "typst-build"
-        )
+        basedir = source.parent if inline else Path(self.env.doctreedir).parent / "typst-build"
 
         try:
             result = render(request, basedir)
@@ -124,9 +118,7 @@ class TypstDirective(SphinxDirective):
         if not inline:
             return []
 
-        container = nodes.container(
-            classes=["typst-render", *self.options.get("class", [])]
-        )
+        container = nodes.container(classes=["typst-render", *self.options.get("class", [])])
 
         if result.preview is not None:
             uri = "/" + result.preview.relative_to(root).as_posix()

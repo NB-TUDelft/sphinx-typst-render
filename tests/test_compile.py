@@ -133,9 +133,7 @@ def test_fillable_pdf_has_form_fields(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("with_fields", [True, False])
-def test_fillable_pdf_preserves_document_metadata(
-    tmp_path: Path, with_fields: bool
-) -> None:
+def test_fillable_pdf_preserves_document_metadata(tmp_path: Path, with_fields: bool) -> None:
     stage_field_library(tmp_path)
     body = (
         '#import "/_typst_lib/capture_field.typ": text_field\n'
@@ -168,11 +166,7 @@ def test_fillable_pdf_preserves_document_metadata(
 
 def test_fillable_pdf_does_not_inherit_overlay_metadata(tmp_path: Path) -> None:
     stage_field_library(tmp_path)
-    body = (
-        '#import "/_typst_lib/capture_field.typ": text_field\n'
-        + SINGLE
-        + 'Value: #text_field("u_in")\n'
-    )
+    body = '#import "/_typst_lib/capture_field.typ": text_field\n' + SINGLE + 'Value: #text_field("u_in")\n'
     result = render(_request(tmp_path, body, fillable=True), tmp_path)
     reader = PdfReader(result.pdf)
 
@@ -252,7 +246,7 @@ def test_fillable_pdf_keeps_bookmarks(tmp_path: Path) -> None:
     )
     result = render(_request(tmp_path, body, preview="none", fillable=True), tmp_path)
     reader = PdfReader(str(result.pdf))
-    assert reader.get_fields()                      # still a form
+    assert reader.get_fields()  # still a form
     first, children, second = reader.outline
     assert (first.title, second.title) == ("First", "Second")
     assert [child.title for child in children] == ["Inner"]
@@ -261,4 +255,3 @@ def test_fillable_pdf_keeps_bookmarks(tmp_path: Path) -> None:
     # The height on the page, which places an image under the right heading.
     assert first.typ == "/XYZ"
     assert first.top is not None
-

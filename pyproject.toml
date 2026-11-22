@@ -47,6 +47,7 @@ Changelog = "https://github.com/NB-TUDelft/sphinx-typst-render/releases"
 dev = [
     "pytest>=8",
     "pytest-cov>=7.1.0",
+    "ruff>=0.17.6",
     "twine>=6.1",
 ]
 
@@ -55,6 +56,12 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 sphinx_typst_render = ["static/*.js", "static/*.css", "fonts/*.ttf", "fonts/*.txt"]
+
+# `uv run ruff format` formats the Python. The code was written wide, and at
+# 120 only the few lines that are really long get wrapped.
+[tool.ruff]
+line-length = 120
+target-version = "py310"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

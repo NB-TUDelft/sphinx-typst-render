@@ -125,8 +125,9 @@ def build_site(work):
     (src / "sheet.typ").write_text(SHEET)
     (src / "index.rst").write_text("Test\n====\n\n.. typst:: sheet.typ\n   :label: Sheet\n   :fillable:\n")
     out = work / "out"
-    app = Sphinx(str(src), str(src), str(out), str(work / "doctrees"), "html",
-                 status=None, warning=io.StringIO(), freshenv=True)
+    app = Sphinx(
+        str(src), str(src), str(out), str(work / "doctrees"), "html", status=None, warning=io.StringIO(), freshenv=True
+    )
     app.build()
     assert (out / "_static" / "typst-editor" / "viewer.html").is_file()
     pdf = next((out / "_downloads" / "typst").rglob("sheet.pdf"))
@@ -196,16 +197,18 @@ class Coverage:
             if not url.startswith(self.served):
                 continue
             # config.js is written per site and has no counterpart here.
-            file = self.assets / url[len(self.served):]
+            file = self.assets / url[len(self.served) :]
             if file.suffix == ".js" and file.is_file():
                 result.append({**script, "url": file.as_uri()})
         self.saved += 1
         (self.dir / f"editor-{os.getpid()}-{self.saved}.json").write_text(
-            json.dumps({"result": result}), encoding="utf-8")
+            json.dumps({"result": result}), encoding="utf-8"
+        )
 
 
 def run_suite():
     from sphinx_typst_render import _editor
+
     if not _editor.available():
         print("editor bundle not built: run `pnpm install && pnpm run check` in editor/")
         return 2
@@ -227,10 +230,7 @@ def run_suite():
         out, pdf_rel = build_site(Path(tmp))
         httpd, port = start_server(out)
         base = f"http://127.0.0.1:{port}"
-        editor_url = (
-            f"{base}/_static/typst-editor/viewer.html?file=../../{pdf_rel}"
-            "&back=../../index.html"
-        )
+        editor_url = f"{base}/_static/typst-editor/viewer.html?file=../../{pdf_rel}&back=../../index.html"
 
         short_answer = "Short answer with Ünïcode."
         long_answer = "A very long answer. " * 120
@@ -261,7 +261,8 @@ def run_suite():
                 pg.set_input_files("#etTestFile", str(png_path))
                 slot_name = pg.evaluate("window.typstRenderEditor.state().slots[0]?.name || null")
                 record("01_image_slot_found", slot_name == "photo", f"slot={slot_name!r}")
-                pg.evaluate("""(sname) => new Promise(cb => {
+                pg.evaluate(
+                    """(sname) => new Promise(cb => {
                     window.typstRenderEditor.slotInsert(sname);
                     const waitIdle = () => {
                         if (!document.body.classList.contains('lb-busy')
@@ -269,16 +270,21 @@ def run_suite():
                         else setTimeout(waitIdle, 200);
                     };
                     setTimeout(waitIdle, 400);
-                })""", slot_name)
+                })""",
+                    slot_name,
+                )
                 # And a photo dropped onto the page itself, outside any image box.
-                pg.evaluate("""(b64) => {
+                pg.evaluate(
+                    """(b64) => {
                     const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
                     const dt = new DataTransfer();
                     dt.items.add(new File([bin], 'loose.png', { type: 'image/png' }));
                     const t = document.querySelector('.page[data-page-number="1"]');
                     t.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
                     t.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
-                }""", base64.b64encode(png_path.read_bytes()).decode())
+                }""",
+                    base64.b64encode(png_path.read_bytes()).decode(),
+                )
                 time.sleep(2)
                 pg.click("#lbToolSelect")
                 pages_before = pg.evaluate(PAGE_COUNT_JS)
@@ -294,19 +300,28 @@ def run_suite():
                 root = r.trailer["/Root"]
                 lf = json.loads(r.metadata["/LogbookFields"])
                 record("03_export_is_flat", "/AcroForm" not in root, "export has no form")
-                record("04_no_live_annotations", all(
-                    not any(a.get_object()["/Subtype"] in ("/Widget", "/Ink", "/Stamp")
-                            for a in (page.get("/Annots", []) or []))
-                    for page in r.pages), "no widgets or stamps left as annotations")
+                record(
+                    "04_no_live_annotations",
+                    all(
+                        not any(
+                            a.get_object()["/Subtype"] in ("/Widget", "/Ink", "/Stamp")
+                            for a in (page.get("/Annots", []) or [])
+                        )
+                        for page in r.pages
+                    ),
+                    "no widgets or stamps left as annotations",
+                )
                 record("05_editable_layer_parked", PARK_KEY in root, "editable layer parked in the catalog")
-                record("06_overflow_page_added", len(r.pages) > pages_before,
-                       f"{pages_before} -> {len(r.pages)} pages")
+                record("06_overflow_page_added", len(r.pages) > pages_before, f"{pages_before} -> {len(r.pages)} pages")
                 slots = sum(1 for v in lf["images"].values() if v and v.get("kind") == "slot")
                 record("07_photo_listed", slots == 1, f"slot images={slots}")
                 loose = [k for k, v in lf["images"].items() if v and v.get("kind") == "loose"]
                 text1 = r.pages[0].extract_text()
-                record("07b_loose_photo_labelled", loose == ["loose:1-1"] and 'loose="1-1"' in text1,
-                       f"loose images={loose}")
+                record(
+                    "07b_loose_photo_labelled",
+                    loose == ["loose:1-1"] and 'loose="1-1"' in text1,
+                    f"loose images={loose}",
+                )
 
                 # Open the export as a fresh file: the editable layer comes back.
                 (out / "reopen_export.pdf").write_bytes(exp)
@@ -316,12 +331,17 @@ def run_suite():
                 toasts = pg.evaluate("[...document.querySelectorAll('.lb-toast')].map(t => t.innerText)")
                 record("08_reopen_toast", any("Opened your exported" in t for t in toasts), str(toasts))
                 pages_now = pg.evaluate(PAGE_COUNT_JS)
-                record("09_overflow_page_removed_on_reopen", pages_now == pages_before,
-                       f"{len(r.pages)} -> {pages_now} pages")
-                record("10_short_answer_back", field_value(pg, "name") == short_answer,
-                       "short answer in a live field")
-                record("11_long_answer_back_in_full", field_value(pg, "preparation") == long_answer,
-                       "long answer in a live field, uncut")
+                record(
+                    "09_overflow_page_removed_on_reopen",
+                    pages_now == pages_before,
+                    f"{len(r.pages)} -> {pages_now} pages",
+                )
+                record("10_short_answer_back", field_value(pg, "name") == short_answer, "short answer in a live field")
+                record(
+                    "11_long_answer_back_in_full",
+                    field_value(pg, "preparation") == long_answer,
+                    "long answer in a live field, uncut",
+                )
                 images_back = pg.evaluate("Object.keys(window.typstRenderEditor.state().images)")
                 record("12_photo_back", "slot:photo" in images_back, f"images={images_back}")
                 snap(pg, "02_reopened")
@@ -331,8 +351,9 @@ def run_suite():
                 lf2 = json.loads(r2.metadata["/LogbookFields"])
                 for k in ("fields", "checks", "images", "overflow"):
                     record(f"13_second_export_same_{k}", lf2[k] == lf[k], f"LogbookFields.{k} unchanged")
-                record("14_second_export_same_pages", len(r2.pages) == len(r.pages),
-                       f"{len(r.pages)} vs {len(r2.pages)}")
+                record(
+                    "14_second_export_same_pages", len(r2.pages) == len(r.pages), f"{len(r.pages)} vs {len(r2.pages)}"
+                )
 
                 # Saved work is offered back after a reload.
                 set_field(pg, "name", short_answer + "!")
@@ -349,9 +370,11 @@ def run_suite():
                 record("15_restore_bar_normal_size", bar["font"] == "13px" and bar["btn"] == 34, str(bar))
                 snap(pg, "03_restore_bar")
 
-                record("16_no_reopen_errors",
-                       not any("could not reopen" in e for e in console_errors),
-                       "; ".join(console_errors) or "no console errors")
+                record(
+                    "16_no_reopen_errors",
+                    not any("could not reopen" in e for e in console_errors),
+                    "; ".join(console_errors) or "no console errors",
+                )
 
                 # Adding an image page should create empty boxes and jump to
                 # the new page. Only the per-box Insert image button picks a file.
@@ -366,29 +389,48 @@ def run_suite():
                 pg.click("#lbInsertImagePage")
                 pg.wait_for_selector("#lbExerciseOk", state="visible")
                 pg.click("#lbExerciseOk")  # default 1 x 1 grid for Exercise 1
-                pg.wait_for_function("""(n) => !document.body.classList.contains('lb-busy')
+                pg.wait_for_function(
+                    """(n) => !document.body.classList.contains('lb-busy')
                     && window.typstRenderEditor.state().pageInfo.length === n + 1""",
-                    arg=pages_before_image_page, timeout=30000)
+                    arg=pages_before_image_page,
+                    timeout=30000,
+                )
                 image_page = pg.evaluate("window.typstRenderEditor.state().pageInfo.at(-1)")
-                image_page_slots = pg.evaluate("""(id) => window.typstRenderEditor.state().slots
-                    .filter(s => s.pageId === id).map(s => s.name)""", image_page["id"])
+                image_page_slots = pg.evaluate(
+                    """(id) => window.typstRenderEditor.state().slots
+                    .filter(s => s.pageId === id).map(s => s.name)""",
+                    image_page["id"],
+                )
                 active_page = pg.input_value("#lbPageNumber")
-                has_auto_image = pg.evaluate("""(name) =>
-                    !!window.typstRenderEditor.state().images['slot:' + name]""", image_page_slots[0])
-                record("17_image_page_added_empty_and_selected",
-                       image_page["added"] and image_page["kind"] == "image"
-                       and len(image_page_slots) == 1 and not has_auto_image
-                       and active_page == str(pages_before_image_page + 1),
-                       f"page={active_page}, slots={len(image_page_slots)}, auto-filled={has_auto_image}")
+                has_auto_image = pg.evaluate(
+                    """(name) =>
+                    !!window.typstRenderEditor.state().images['slot:' + name]""",
+                    image_page_slots[0],
+                )
+                record(
+                    "17_image_page_added_empty_and_selected",
+                    image_page["added"]
+                    and image_page["kind"] == "image"
+                    and len(image_page_slots) == 1
+                    and not has_auto_image
+                    and active_page == str(pages_before_image_page + 1),
+                    f"page={active_page}, slots={len(image_page_slots)}, auto-filled={has_auto_image}",
+                )
                 pg.wait_for_selector(f"#lbSlotInsert_{image_page_slots[0]}", state="visible")
                 pg.evaluate("slot => window.typstRenderEditor.slotInsert(slot)", image_page_slots[0])
-                pg.wait_for_function("""(name) => !document.body.classList.contains('lb-busy')
+                pg.wait_for_function(
+                    """(name) => !document.body.classList.contains('lb-busy')
                     && !!window.typstRenderEditor.state().images['slot:' + name]""",
-                    arg=image_page_slots[0], timeout=30000)
-                record("18_image_page_slot_button_inserts_image",
-                       pg.evaluate("""(name) => !!window.typstRenderEditor.state().images['slot:' + name]""",
-                                   image_page_slots[0]),
-                       "image appeared after pressing Insert image")
+                    arg=image_page_slots[0],
+                    timeout=30000,
+                )
+                record(
+                    "18_image_page_slot_button_inserts_image",
+                    pg.evaluate(
+                        """(name) => !!window.typstRenderEditor.state().images['slot:' + name]""", image_page_slots[0]
+                    ),
+                    "image appeared after pressing Insert image",
+                )
                 check_saves_and_print(pg, cov, record)
                 cov.save()
                 ctx.close()
@@ -410,16 +452,24 @@ def check_saves_and_print(pg, cov, record):
     deadline = time.time() + 15
     while "old_a" in (saves := pg.evaluate(IDB_JS, [STORE, "dump", []])) and time.time() < deadline:
         time.sleep(0.25)
-    record("19_old_saves_merged",
-           saves.get("merged") == [4, NEW_SAVE] and saves.get(f"prev:merged:{OLD_SAVE}") == [3, OLD_SAVE]
-           and "old_a" not in saves and "old_b" not in saves, str(saves))
+    record(
+        "19_old_saves_merged",
+        saves.get("merged") == [4, NEW_SAVE]
+        and saves.get(f"prev:merged:{OLD_SAVE}") == [3, OLD_SAVE]
+        and "old_a" not in saves
+        and "old_b" not in saves,
+        str(saves),
+    )
 
     # Printing renders every page into #printContainer, one after another.
     pages = pg.evaluate(PAGE_COUNT_JS)
     pg.evaluate(PRINT_JS)
     pg.wait_for_function("n => window.__printed.length === n", arg=pages, timeout=30000)
-    record("20_print_renders_every_page",
-           pg.evaluate("() => window.__printed.every(img => img.naturalWidth > 0)"), f"{pages} page(s)")
+    record(
+        "20_print_renders_every_page",
+        pg.evaluate("() => window.__printed.every(img => img.naturalWidth > 0)"),
+        f"{pages} page(s)",
+    )
 
     # Deleting this worksheet's saved work leaves other documents' saves alone.
     before = pg.evaluate(IDB_JS, [STORE, "dump", []])
@@ -435,9 +485,11 @@ def check_saves_and_print(pg, cov, record):
     wait_editor(pg)
     after = pg.evaluate(IDB_JS, [STORE, "dump", []])
     mine = [k for k in before if k == "sheet" or k.startswith("prev:sheet:")]
-    record("21_delete_removes_only_this_worksheet",
-           "deleted" in toast and bool(mine) and not any(k in after for k in mine) and "merged" in after,
-           f"{toast!r}; before={sorted(before)} after={sorted(after)}")
+    record(
+        "21_delete_removes_only_this_worksheet",
+        "deleted" in toast and bool(mine) and not any(k in after for k in mine) and "merged" in after,
+        f"{toast!r}; before={sorted(before)} after={sorted(after)}",
+    )
 
 
 def write_report(states):

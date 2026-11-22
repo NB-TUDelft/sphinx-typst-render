@@ -84,10 +84,17 @@ def register(
             entry["label"] = label
             entry["title"] = title or label
             return uri
-    entries.append({
-        "uri": uri, "path": str(path), "label": label, "kind": kind, "icon": ICONS[kind],
-        "title": title or label, "digest": digest,
-    })
+    entries.append(
+        {
+            "uri": uri,
+            "path": str(path),
+            "label": label,
+            "kind": kind,
+            "icon": ICONS[kind],
+            "title": title or label,
+            "digest": digest,
+        }
+    )
     return uri
 
 

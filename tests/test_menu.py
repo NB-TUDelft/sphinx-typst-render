@@ -11,9 +11,7 @@ import pytest
 
 from sphinx_typst_render import _downloads, _editor
 
-editor_built = pytest.mark.skipif(
-    not _editor.available(), reason="editor bundle not built (pnpm run build in editor/)"
-)
+editor_built = pytest.mark.skipif(not _editor.available(), reason="editor bundle not built (pnpm run build in editor/)")
 
 
 def _config(**overrides) -> SimpleNamespace:
@@ -59,8 +57,12 @@ def _menu(kinds: list[str], tmp_path: Path):
     source.write_text("= Sheet\n")
     for kind in kinds:
         _downloads.register(
-            env, "week1/page", digest="abc123",
-            path=source if kind == "raw" else pdf, label=f"Entry ({kind})", kind=kind,
+            env,
+            "week1/page",
+            digest="abc123",
+            path=source if kind == "raw" else pdf,
+            label=f"Entry ({kind})",
+            kind=kind,
         )
     app = SimpleNamespace(env=env, builder=SimpleNamespace(get_target_uri=lambda name: f"{name}.html"))
     group = {"type": "group", "label": _downloads.THEME_GROUP_LABEL, "buttons": []}
@@ -93,13 +95,17 @@ def test_the_editor_and_the_pdf_share_a_file_but_not_an_entry(tmp_path: Path) ->
 
 
 def test_editor_settings_reach_the_editor_under_its_own_names() -> None:
-    settings = _editor.settings(_config(typst_render_editor={
-        "storage": "nb2420-logbooks",
-        "key_pattern": r"^(\d+\.\d+)(?=[_ ]|$)",
-        "label_prefix": "NB2420",
-        "noun": "logbook",
-        "aliases": {"2.3": "2.2"},
-    }))
+    settings = _editor.settings(
+        _config(
+            typst_render_editor={
+                "storage": "nb2420-logbooks",
+                "key_pattern": r"^(\d+\.\d+)(?=[_ ]|$)",
+                "label_prefix": "NB2420",
+                "noun": "logbook",
+                "aliases": {"2.3": "2.2"},
+            }
+        )
+    )
     assert settings["storage"] == "nb2420-logbooks"
     assert settings["keyPattern"] == r"^(\d+\.\d+)(?=[_ ]|$)"
     assert (settings["labelPrefix"], settings["noun"]) == ("NB2420", "logbook")
@@ -131,10 +137,10 @@ def test_install_gives_the_editor_page_the_books_favicon(tmp_path: Path) -> None
         )
         return (_editor.install(app) / "viewer.html").read_text(encoding="utf-8")
 
-    assert '<link rel="icon" href="../../_static/logo.svg">' in installed_page(
-        html_favicon="_static/logo.svg")
+    assert '<link rel="icon" href="../../_static/logo.svg">' in installed_page(html_favicon="_static/logo.svg")
     assert 'href="https://example.com/i.ico?a=1&amp;b=2"' in installed_page(
-        html_favicon="https://example.com/i.ico?a=1&b=2")
+        html_favicon="https://example.com/i.ico?a=1&b=2"
+    )
     assert 'rel="icon"' not in installed_page()
 
 
@@ -145,13 +151,19 @@ def test_install_copies_the_bundle_and_writes_the_settings(tmp_path: Path) -> No
         config=_config(typst_render_editor={"noun": "logbook"}),
     )
     target = _editor.install(app)
-    for name in ("viewer.html", "editor.js", "editor.css", "pdf.worker.mjs",
-                 "pdfjs/pdf_viewer.css", "pdfjs/standard_fonts/LiberationSans-Regular.ttf"):
+    for name in (
+        "viewer.html",
+        "editor.js",
+        "editor.css",
+        "pdf.worker.mjs",
+        "pdfjs/pdf_viewer.css",
+        "pdfjs/standard_fonts/LiberationSans-Regular.ttf",
+    ):
         assert (target / name).is_file(), name
     text = (target / "config.js").read_text(encoding="utf-8")
     prefix = "window.typstEditorConfig = "
     assert text.startswith(prefix)
-    assert json.loads(text[len(prefix):].rstrip().rstrip(";"))["noun"] == "logbook"
+    assert json.loads(text[len(prefix) :].rstrip().rstrip(";"))["noun"] == "logbook"
 
 
 def test_release_builds_carry_the_editor() -> None:

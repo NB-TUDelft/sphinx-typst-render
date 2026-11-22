@@ -32,6 +32,7 @@ FONT_DIR = Path(__file__).parent / "fonts"
 def _font_paths() -> list[str]:
     return [str(FONT_DIR)] if FONT_DIR.is_dir() else []
 
+
 #: Characters a generated text field accepts unless configured otherwise.
 #: Large enough that no worksheet answer reaches it, and written explicitly
 #: because some readers treat a missing /MaxLen as zero and refuse all input.
@@ -248,13 +249,9 @@ def _add_form_fields(base: bytes, request: RenderRequest) -> bytes:
     # Replace the info dictionary so absent values do not inherit overlay data.
     writer.metadata = reader.metadata
     if METADATA in reader.trailer["/Root"]:
-        writer.root_object[NameObject(METADATA)] = (
-            reader.trailer["/Root"].raw_get(METADATA).clone(writer)
-        )
+        writer.root_object[NameObject(METADATA)] = reader.trailer["/Root"].raw_get(METADATA).clone(writer)
     if reader.metadata and reader.metadata.title:
-        writer.create_viewer_preferences()[NameObject("/DisplayDocTitle")] = (
-            BooleanObject(True)
-        )
+        writer.create_viewer_preferences()[NameObject("/DisplayDocTitle")] = BooleanObject(True)
     for index, page in enumerate(reader.pages):
         if index < len(writer.pages):
             writer.pages[index].merge_page(page, over=False)
@@ -277,7 +274,9 @@ def _compile_pdf(request: RenderRequest) -> bytes:
 
 def _compile_preview(request: RenderRequest) -> bytes:
     options: dict[str, object] = {
-        "root": str(request.root), "format": request.preview, "font_paths": _font_paths(),
+        "root": str(request.root),
+        "format": request.preview,
+        "font_paths": _font_paths(),
     }
     if request.preview == "png":
         options["ppi"] = request.ppi or 144.0
@@ -288,8 +287,7 @@ def _compile_preview(request: RenderRequest) -> bytes:
         index = max(1, request.preview_page) - 1
         if index >= len(rendered):
             raise IndexError(
-                f"{request.source.name} has {len(rendered)} pages, "
-                f"cannot preview page {request.preview_page}"
+                f"{request.source.name} has {len(rendered)} pages, cannot preview page {request.preview_page}"
             )
         return rendered[index]
     return rendered

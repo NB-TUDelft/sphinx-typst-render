@@ -40,7 +40,9 @@ def main(before, after):
     same = len(pages_a) == len(pages_b)
     print(f"pages: {len(pages_a)} and {len(pages_b)}")
     for n, (a, b) in enumerate(zip(pages_a, pages_b), 1):
-        print(f"page {n}: content {'same' if a[0] == b[0] else 'DIFFERENT'}, text {'same' if a[1] == b[1] else 'DIFFERENT'}")
+        print(
+            f"page {n}: content {'same' if a[0] == b[0] else 'DIFFERENT'}, text {'same' if a[1] == b[1] else 'DIFFERENT'}"
+        )
         same = same and a == b
     for path in differences(fields_a, fields_b):
         print(f"LogbookFields{path}: {'differs, as expected' if path in EXPECTED else 'DIFFERENT'}")

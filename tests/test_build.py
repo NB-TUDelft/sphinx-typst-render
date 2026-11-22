@@ -10,9 +10,7 @@ from sphinx.application import Sphinx
 
 from sphinx_typst_render import _editor
 
-pytestmark = pytest.mark.skipif(
-    not _editor.available(), reason="editor bundle not built (pnpm run build in editor/)"
-)
+pytestmark = pytest.mark.skipif(not _editor.available(), reason="editor bundle not built (pnpm run build in editor/)")
 
 
 def _build(tmp_path: Path, conf: str) -> Path:
@@ -22,8 +20,16 @@ def _build(tmp_path: Path, conf: str) -> Path:
     (src / "sheet.typ").write_text("#set page(width: 80mm, height: 40mm)\n= Sheet\n")
     (src / "index.rst").write_text("Test\n====\n\n.. typst:: sheet.typ\n   :label: Sheet\n")
     out = tmp_path / "out"
-    app = Sphinx(str(src), str(src), str(out), str(tmp_path / "doctrees"), "html",
-                 status=None, warning=io.StringIO(), freshenv=True)
+    app = Sphinx(
+        str(src),
+        str(src),
+        str(out),
+        str(tmp_path / "doctrees"),
+        "html",
+        status=None,
+        warning=io.StringIO(),
+        freshenv=True,
+    )
     app.build()
     return out
 

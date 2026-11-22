@@ -65,9 +65,7 @@ def _install_assets(app) -> None:
         "source": app.config.typst_render_source_label,
         "downloads": app.config.typst_render_downloads_label,
     }
-    (generated / LABELS_FILENAME).write_text(
-        f"window.typstRenderLabels = {json.dumps(labels)};\n"
-    )
+    (generated / LABELS_FILENAME).write_text(f"window.typstRenderLabels = {json.dumps(labels)};\n")
 
     app.config.html_static_path.append(str(STATIC_DIR))
     app.config.html_static_path.append(str(generated))

@@ -40,18 +40,24 @@ def test_this_repositorys_knowledge_base_is_current(capsys) -> None:
 
 
 def test_the_index_comes_from_titles_and_front_matter_in_prefix_order(tmp_path: Path, capsys) -> None:
-    root = make_kb(tmp_path, {
-        "README.md": README_HEAD + MARKERS,
-        "010-rules.md": section("Rules", "how to work here."),
-        "010-rules/020-later.md": section("Later [b]", "comes second"),
-        "010-rules/010-first.md": section("First", "comes first: with a colon", always_read=True),
-        "010-rules/010-first/010-child.md": section("Child", "nested under First", always_read=True),
-        "020-history.md": section("History", "finished work."),
-        "020-history/010-record.md": section("Record", "an old record"),
-    })
+    root = make_kb(
+        tmp_path,
+        {
+            "README.md": README_HEAD + MARKERS,
+            "010-rules.md": section("Rules", "how to work here."),
+            "010-rules/020-later.md": section("Later [b]", "comes second"),
+            "010-rules/010-first.md": section("First", "comes first: with a colon", always_read=True),
+            "010-rules/010-first/010-child.md": section("Child", "nested under First", always_read=True),
+            "020-history.md": section("History", "finished work."),
+            "020-history/010-record.md": section("Record", "an old record"),
+        },
+    )
 
     assert kb.main(["--root", str(root)]) == 0
-    assert readme(root) == README_HEAD + """<!-- kb-index:start -->
+    assert (
+        readme(root)
+        == README_HEAD
+        + """<!-- kb-index:start -->
 
 **Always read**, in this order:
 
@@ -70,6 +76,7 @@ def test_the_index_comes_from_titles_and_front_matter_in_prefix_order(tmp_path: 
 
 <!-- kb-index:end -->
 """
+    )
     assert "rewritten" in capsys.readouterr().out
     assert kb.main(["--root", str(root)]) == 0
     assert "already current" in capsys.readouterr().out
@@ -99,18 +106,21 @@ def test_a_title_inside_a_code_fence_is_not_a_second_title(tmp_path: Path) -> No
 GROUP = section("Group", "a group.")
 
 
-@pytest.mark.parametrize(("files", "problem"), [
-    ({"010-Bad Name.md": GROUP}, "not a section name"),
-    ({"010-a.md": GROUP, "010-b.md": GROUP}, "prefix 010 is used twice"),
-    ({"010-group.md": GROUP, "020-orphan/010-x.md": GROUP}, "has no 020-orphan.md beside it"),
-    ({"010-group.md": GROUP, "notes/010-x.md": GROUP}, "not a section directory name"),
-    ({"010-group.md": "# Group\n"}, "does not start with front matter"),
-    ({"010-group.md": "---\nsummary: >-\n  a group.\n"}, "front matter is never closed"),
-    ({"010-group.md": "---\ntitle: Group\n---\n\n# Group\n"}, 'unsupported front matter line "title: Group"'),
-    ({"010-group.md": "---\nalways_read: true\n---\n\n# Group\n"}, "no summary"),
-    ({"010-group.md": "---\nsummary: >-\n  a group.\n---\n\nNo title.\n"}, 'must be its "# Title"'),
-    ({"010-group.md": section("Group", "a group.", body="# Another")}, 'more than one "# " title'),
-])
+@pytest.mark.parametrize(
+    ("files", "problem"),
+    [
+        ({"010-Bad Name.md": GROUP}, "not a section name"),
+        ({"010-a.md": GROUP, "010-b.md": GROUP}, "prefix 010 is used twice"),
+        ({"010-group.md": GROUP, "020-orphan/010-x.md": GROUP}, "has no 020-orphan.md beside it"),
+        ({"010-group.md": GROUP, "notes/010-x.md": GROUP}, "not a section directory name"),
+        ({"010-group.md": "# Group\n"}, "does not start with front matter"),
+        ({"010-group.md": "---\nsummary: >-\n  a group.\n"}, "front matter is never closed"),
+        ({"010-group.md": "---\ntitle: Group\n---\n\n# Group\n"}, 'unsupported front matter line "title: Group"'),
+        ({"010-group.md": "---\nalways_read: true\n---\n\n# Group\n"}, "no summary"),
+        ({"010-group.md": "---\nsummary: >-\n  a group.\n---\n\nNo title.\n"}, 'must be its "# Title"'),
+        ({"010-group.md": section("Group", "a group.", body="# Another")}, 'more than one "# " title'),
+    ],
+)
 def test_a_broken_layout_is_reported_and_the_index_left_alone(tmp_path: Path, capsys, files, problem) -> None:
     root = make_kb(tmp_path, {"README.md": MARKERS, **files})
     assert kb.main(["--root", str(root)]) == 1

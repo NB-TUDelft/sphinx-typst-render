@@ -90,10 +90,7 @@ class TypstOverviewDirective(SphinxDirective):
             except ValueError:
                 day = None
             if not group.strip() or day is None:
-                raise self.error(
-                    ":highlight-weekly: takes a group and its first day, "
-                    "like 'Week 3, 2026-11-21'"
-                )
+                raise self.error(":highlight-weekly: takes a group and its first day, like 'Week 3, 2026-11-21'")
             node["weekly"] = (group.strip(), day.isoformat())
         return [node]
 
@@ -169,9 +166,7 @@ def render(app, docname: str, node: overview) -> str:
     parts = ['<div class="typst-overview">']
     if highlighted:
         parts.append(
-            '<section class="typst-overview-highlight">'
-            + _group(node["highlight_title"], highlighted)
-            + "</section>"
+            '<section class="typst-overview-highlight">' + _group(node["highlight_title"], highlighted) + "</section>"
         )
     weekly = _weekly(node, groups, docname)
     parts += weekly
@@ -202,12 +197,14 @@ def _weekly(node: overview, groups: dict[str, list[str]], docname: str) -> list[
     if first not in titles:
         logger.warning(
             "typst-overview: no group %r for :highlight-weekly: (groups: %s)",
-            first, ", ".join(titles), location=docname,
+            first,
+            ", ".join(titles),
+            location=docname,
         )
         return []
     day = datetime.date.fromisoformat(start)
     boxes = []
-    for step, title in enumerate(titles[titles.index(first):]):
+    for step, title in enumerate(titles[titles.index(first) :]):
         begin = day + datetime.timedelta(weeks=step)
         end = begin + datetime.timedelta(weeks=1)
         boxes.append(
