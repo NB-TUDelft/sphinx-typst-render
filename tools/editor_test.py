@@ -97,13 +97,17 @@ def start_server(directory):
     return httpd, httpd.server_address[1]
 
 
-def make_png(w=60, h=40, rgb=(0xD0, 0x30, 0x30)):
-    """A small valid solid-colour PNG, as bytes."""
+def make_png(w=60, h=40):
+    """A small valid PNG with a colour gradient, as bytes. Red grows left to right and
+    blue top to bottom, so a crop, stretch or flip in the export shows up at a glance."""
 
     def chunk(tag, data):
         return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
 
-    raw = b"".join(b"\x00" + bytes(rgb) * w for _ in range(h))
+    raw = b"".join(
+        b"\x00" + b"".join(bytes((40 + 200 * x // (w - 1), 60, 40 + 200 * y // (h - 1))) for x in range(w))
+        for y in range(h)
+    )
     ihdr = struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b"")
 
