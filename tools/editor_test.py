@@ -258,8 +258,7 @@ def run_suite():
                 record("14_second_export_same_pages", len(r2.pages) == len(r.pages),
                        f"{len(r.pages)} vs {len(r2.pages)}")
 
-                # Saved work is offered back after a reload, in a bar that is
-                # not easily missed (1.5x the normal size).
+                # Saved work is offered back after a reload.
                 set_field(pg, "name", short_answer + "!")
                 pg.evaluate("window.typstRenderEditor.autosaveNow(true).then(() => true)")
                 pg.reload()
@@ -270,12 +269,49 @@ def run_suite():
                     const btn = document.getElementById('lbRestoreYes');
                     return { font: getComputedStyle(el).fontSize, btn: btn.offsetHeight };
                 }""")
-                record("15_restore_bar_large", bar["font"] == "20px" and bar["btn"] >= 51, str(bar))
+                record("15_restore_bar_normal_size", bar["font"] == "13px" and bar["btn"] == 34, str(bar))
                 snap(pg, "03_restore_bar")
 
                 record("16_no_reopen_errors",
                        not any("could not reopen" in e for e in console_errors),
                        "; ".join(console_errors) or "no console errors")
+
+                # Adding an image page should create empty boxes and jump to
+                # the new page. Only the per-box Insert image button picks a file.
+                pg.evaluate("""() => {
+                    const inp = document.createElement('input');
+                    inp.type = 'file'; inp.id = 'etImagePageFile'; inp.style.display = 'none';
+                    document.body.appendChild(inp);
+                    window.typstRenderEditor.setTestFile('etImagePageFile');
+                }""")
+                pg.set_input_files("#etImagePageFile", str(png_path))
+                pages_before_image_page = pg.evaluate("window.typstRenderEditor.state().pageInfo.length")
+                pg.click("#lbInsertImagePage")
+                pg.wait_for_selector("#lbExerciseOk", state="visible")
+                pg.click("#lbExerciseOk")  # default 1 x 1 grid for Exercise 1
+                pg.wait_for_function("""(n) => !document.body.classList.contains('lb-busy')
+                    && window.typstRenderEditor.state().pageInfo.length === n + 1""",
+                    arg=pages_before_image_page, timeout=30000)
+                image_page = pg.evaluate("window.typstRenderEditor.state().pageInfo.at(-1)")
+                image_page_slots = pg.evaluate("""(id) => window.typstRenderEditor.state().slots
+                    .filter(s => s.pageId === id).map(s => s.name)""", image_page["id"])
+                active_page = pg.input_value("#lbPageNumber")
+                has_auto_image = pg.evaluate("""(name) =>
+                    !!window.typstRenderEditor.state().images['slot:' + name]""", image_page_slots[0])
+                record("17_image_page_added_empty_and_selected",
+                       image_page["added"] and image_page["kind"] == "image"
+                       and len(image_page_slots) == 1 and not has_auto_image
+                       and active_page == str(pages_before_image_page + 1),
+                       f"page={active_page}, slots={len(image_page_slots)}, auto-filled={has_auto_image}")
+                pg.wait_for_selector(f"#lbSlotInsert_{image_page_slots[0]}", state="visible")
+                pg.evaluate("slot => window.typstRenderEditor.slotInsert(slot)", image_page_slots[0])
+                pg.wait_for_function("""(name) => !document.body.classList.contains('lb-busy')
+                    && !!window.typstRenderEditor.state().images['slot:' + name]""",
+                    arg=image_page_slots[0], timeout=30000)
+                record("18_image_page_slot_button_inserts_image",
+                       pg.evaluate("""(name) => !!window.typstRenderEditor.state().images['slot:' + name]""",
+                                   image_page_slots[0]),
+                       "image appeared after pressing Insert image")
                 ctx.close()
             finally:
                 browser.close()

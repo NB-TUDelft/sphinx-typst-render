@@ -615,34 +615,27 @@ body.lb-custom
 	transform: translateX(-50%);
 	display: flex;
 	flex-wrap: wrap;
-	gap: 15px 24px;
+	gap: 10px 16px;
 	align-items: center;
-	width: min(930px, calc(100vw - 32px));
-	padding: 21px 24px;
+	width: min(620px, calc(100vw - 32px));
+	padding: 14px 16px;
 	background: oklch(100% 0 none);
-	border-radius: 21px;
-	font: 20px / 1.4 var(--lb-font);
+	border-radius: 14px;
+	font: 13px / 1.4 var(--lb-font);
 	color: var(--lb-ink);
 	box-shadow:
 		0 0 0 1px var(--lb-line),
-		0 24px 60px oklch(20.99% 0.0341 263.4 / 0.24);
-}
-/* 1.5x the normal size: students missed this bar after a reload. */
-.lb-restore .lb-btn {
-	height: 51px;
-	padding: 0 21px;
-	border-radius: 13px;
-	font-size: 20px;
+		0 16px 40px oklch(20.99% 0.0341 263.4 / 0.24);
 }
 .lb-restore-text {
-	flex: 1 1 390px;
+	flex: 1 1 260px;
 	display: flex;
 	flex-direction: column;
-	gap: 3px;
+	gap: 2px;
 }
 .lb-restore-text strong {
 	font-weight: 600;
-	font-size: 21px;
+	font-size: 14px;
 }
 .lb-restore-text span {
 	color: var(--lb-muted);
