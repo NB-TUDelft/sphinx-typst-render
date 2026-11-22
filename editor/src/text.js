@@ -55,11 +55,21 @@ export const boxOf = rect => {
   const y1 = Math.min(rect[1], rect[3]), y2 = Math.max(rect[1], rect[3]);
   return { x1, x2, y1, y2, w: x2 - x1, h: y2 - y1 };
 };
-export const daSize = da => parseFloat(((da || '').match(/([\d.]+)\s+Tf/) || [])[1]) || 0;
+// The `count` numbers in front of the operator `op` in a DA string such as
+// "/Helv 12 Tf 0 0.5 0 rg", or null. Split on whitespace rather than matched
+// with a regular expression, which (`[\d.]+\s+`) backtracks on long digit runs.
+const operands = (da, op, count) => {
+  const tokens = (da || '').trim().split(/\s+/);
+  const at = tokens.indexOf(op);
+  if (at < count) return null;
+  const numbers = tokens.slice(at - count, at).map(Number);
+  return numbers.every(Number.isFinite) ? numbers : null;
+};
+export const daSize = da => operands(da, 'Tf', 1)?.[0] || 0;
 export const startSize = (ff, sizeDA, h) => sizeDA || ((ff & 4096) ? 10 : Math.min(12, (h - 2) / 1.2));
 export const fitsAt = (font, text, multi, w, h, size, extraLines = 0) => multi
   ? (wrapLines(text, font, size, w - 2 * PAD).length + extraLines) * size * LEAD <= h - 2 * PAD
-  : font.widthOfTextAtSize(text.replace(/\n/g, ' '), size) <= w - 2 * PAD;
+  : font.widthOfTextAtSize(text.replaceAll('\n', ' '), size) <= w - 2 * PAD;
 // Largest size from `start` down to MIN_PT (1 pt integer steps) at which the text fits; null if none.
 export function fitSize(font, text, multi, w, h, start, extraLines = 0) {
   if (fitsAt(font, text, multi, w, h, start, extraLines)) return start;
@@ -92,8 +102,8 @@ export function drawFieldText(page, font, charset, rect, value, da, ff, q, opts 
   const text = [...value.replace(/\r\n?/g, '\n')]
     .map(c => (c === '\n' || charset.has(c.codePointAt(0))) ? c : '?').join('');
   let color = rgb(0, 0, 0);
-  const mRgb = da.match(/([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+rg/), mG = da.match(/([\d.]+)\s+g(\s|$)/);
-  if (mRgb) color = rgb(+mRgb[1], +mRgb[2], +mRgb[3]); else if (mG) color = rgb(+mG[1], +mG[1], +mG[1]);
+  const fill = operands(da, 'rg', 3), grey = operands(da, 'g', 1);
+  if (fill) color = rgb(...fill); else if (grey) color = rgb(grey[0], grey[0], grey[0]);
   const xFor = (line, size) => {
     const tw = font.widthOfTextAtSize(line, size);
     return q === 1 ? x1 + (w - tw) / 2 : q === 2 ? x2 - PAD - tw : x1 + PAD;
@@ -112,7 +122,7 @@ export function drawFieldText(page, font, charset, rect, value, da, ff, q, opts 
       page.drawText(opts.ref, { x: x1 + PAD, y: Math.max(y1 + PAD, yAt(lines.length) + (size - rs) * 0.9), size: rs, font, color: red });
     }
   } else {
-    const line = text.replace(/\n/g, ' ');
+    const line = text.replaceAll('\n', ' ');
     const size = opts.size || fitSize(font, line, false, w, h, start) || MIN_PT;
     page.drawText(line, { x: xFor(line, size), y: y1 + h / 2 - size * 0.35, size, font, color });
   }

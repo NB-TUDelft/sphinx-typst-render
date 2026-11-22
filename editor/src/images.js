@@ -27,7 +27,7 @@ export async function decodeImage(file) {
       ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
       await page.render({ canvas: c, canvasContext: ctx, viewport: vp }).promise;
       return c;
-    } finally { task.destroy(); }
+    } finally { void task.destroy(); }
   }
   try { return await createImageBitmap(file); } catch (err) {
     // Only SVG needs an <img>: an <img> also "decodes" a broken JPEG or PNG

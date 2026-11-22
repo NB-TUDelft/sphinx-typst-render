@@ -69,7 +69,7 @@ class Viewer {
     container.addEventListener('wheel', e => this.#onWheel(e), { passive: false });
     // A print started from a script goes through the rendering below, as in
     // the stock viewer, which also replaces window.print.
-    window.print = () => this.print();
+    window.print = () => { void this.print(); };
   }
 
   get pagesCount() {
@@ -92,7 +92,7 @@ class Viewer {
     const scale = this.pdfDocument ? this.pdfViewer.currentScaleValue : null;
     const task = getDocument({ ...documentOptions, ...(data ? { data } : { url }) });
     task.onProgress = ({ loaded, total }) => {
-      this.loadingBar.percent = total ? Math.round((100 * loaded) / total) : NaN;
+      this.loadingBar.percent = total ? Math.round((100 * loaded) / total) : Number.NaN;
     };
     this.loadingBar.show();
     let doc;

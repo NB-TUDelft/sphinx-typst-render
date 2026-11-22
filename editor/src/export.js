@@ -66,7 +66,7 @@ export async function flattenedBytes(decide = askOverflow) {
     beginText(), setFontAndSize(key, 4), setTextRenderingMode(TextRenderingMode.Invisible),
     setTextMatrix(1, 0, 0, 1, x, y), showText(font.encodeText(safe(str))),
     setTextRenderingMode(TextRenderingMode.Fill), endText());   // Tr is text state and survives ET: reset or the answers drawn next are invisible too
-  const attr = (k, v) => v === undefined || v === null || v === '' ? '' : ` ${k}="${String(v).replace(/"/g, "'")}"`;   // swap quotes inside values only, so the label syntax keeps its own
+  const attr = (k, v) => v === undefined || v === null || v === '' ? '' : ` ${k}="${String(v).replaceAll('"', "'")}"`;   // swap quotes inside values only, so the label syntax keeps its own
   const exact = { pages: [], fields: {}, checks: {}, images: {}, overflow: {} };   // the same, verbatim, in the Info dict
   const texts = [];                                             // drawn after all pages, once overflow is decided
   const slotMeta = name => state.images['slot:' + name] || {};

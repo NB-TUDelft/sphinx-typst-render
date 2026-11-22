@@ -65,7 +65,7 @@ export function buildBar() {
     $('span', { class: 'lb-name' }, capital(config.noun)));
   ui.pageInput = $('input', { id: 'lbPageNumber', class: 'lb-page-input', type: 'text', inputmode: 'numeric', 'aria-label': 'Page number', value: '1' });
   ui.pageInput.addEventListener('change', () => {
-    const n = parseInt(ui.pageInput.value, 10);
+    const n = Number.parseInt(ui.pageInput.value, 10);
     if (n >= 1 && n <= a().pagesCount) a().pdfViewer.currentPageNumber = n; else syncPage();
   });
   ui.pageInput.addEventListener('focus', () => ui.pageInput.select());
@@ -246,7 +246,7 @@ export function syncZoom() {
 export function syncTitle() {
   if (!ui.title) return;
   const name = (state.id || capital(config.noun))
-    .replace(new RegExp(`_${escapeRegExp(config.noun)}$`, 'i'), '').replace(/_/g, ' ');
+    .replace(new RegExp(`_${escapeRegExp(config.noun)}$`, 'i'), '').replaceAll('_', ' ');
   ui.title.querySelector('.lb-name').textContent = name;
   document.title = `${name} · ${config.brand ? config.brand + ' ' : ''}${config.noun}`;
 }

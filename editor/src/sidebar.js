@@ -39,7 +39,7 @@ export function fillSidebar() {
   side.observer?.disconnect();
   side.list.replaceChildren();
   side.observer = new IntersectionObserver(entries => {
-    for (const e of entries) if (e.isIntersecting) { side.observer.unobserve(e.target); drawThumb(e.target, gen); }
+    for (const e of entries) if (e.isIntersecting) { side.observer.unobserve(e.target); void drawThumb(e.target, gen); }
   }, { root: side.el, rootMargin: '300px' });
   for (let n = 1; n <= a.pagesCount; n++) {
     const vp = a.pdfViewer.getPageView(n - 1)?.viewport;
@@ -76,7 +76,7 @@ export function markCurrent() {
   if (!side.list) return;
   const cur = app()?.pdfViewer?.currentPageNumber || 1;
   // Redraw the page just left, so its thumbnail shows what was typed there.
-  if (side.open && lastPage !== cur) { const prev = side.list.querySelector(`[data-page="${lastPage}"]`); if (prev) drawThumb(prev, side.gen); }
+  if (side.open && lastPage !== cur) { const prev = side.list.querySelector(`[data-page="${lastPage}"]`); if (prev) void drawThumb(prev, side.gen); }
   lastPage = cur;
   for (const it of side.list.children) {
     const on = +it.dataset.page === cur;

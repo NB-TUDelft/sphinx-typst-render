@@ -87,7 +87,7 @@ function pageFields(pageNumber) {
 function measure(f, font, text) {
   const { w, h } = f.b, avail = w - 2 * PAD, size = f.start, avgS = font.avg(size);
   if (!f.multi) {
-    const used = font.widthOfTextAtSize(text.replace(/\n/g, ' '), size);
+    const used = font.widthOfTextAtSize(text.replaceAll('\n', ' '), size);
     return { left: Math.floor((avail - used) / avgS) };
   }
   if (fitsAt(font, text, true, w, h, size)) {
@@ -138,7 +138,7 @@ export function attachHints(pageNumber) {
           mirror.style.right = 'auto';
           // As wide as the box minus its scrollbar, so lines wrap where the box wraps them.
           // Measured only while the box is shown: pdf.js hides the layer for a moment on zoom.
-          if (el.offsetWidth) sbWidth = el.offsetWidth - el.clientWidth - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth);
+          if (el.offsetWidth) sbWidth = el.offsetWidth - el.clientWidth - Number.parseFloat(cs.borderLeftWidth) - Number.parseFloat(cs.borderRightWidth);
           mirror.style.width = `calc(100% - ${sbWidth}px)`;
           mirror.replaceChildren(document.createTextNode(text.slice(0, m.cut)), $('mark', {}, text.slice(m.cut) || ' '));
           mirror.scrollTop = el.scrollTop;

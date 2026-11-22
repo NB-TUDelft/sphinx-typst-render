@@ -27,7 +27,7 @@ export function decoratePage(pageNumber) {
       catch (err) { toast('Could not read that image (' + err.message + '). Try a JPEG or PNG.'); }
     };
     // An empty slot covers its placeholder field: clicking anywhere in it picks an image.
-    if (!filled) box.addEventListener('click', e => { if (e.target === box) insert(); });
+    if (!filled) box.addEventListener('click', e => { if (e.target === box) void insert(); });
     const bar = $('div', { class: 'lb-slot-bar' },
       $('button', { id: 'lbSlotInsert_' + slot.name, type: 'button', class: 'lb-btn lb-primary', 'data-act': 'slot-insert', onclick: insert }, filled ? 'Replace image' : 'Insert image'));
     if (filled) bar.append($('button', { id: 'lbSlotRemove_' + slot.name, type: 'button', class: 'lb-btn', 'data-act': 'slot-remove', onclick: () => placeInSlot(slot, null) }, 'Remove'));
