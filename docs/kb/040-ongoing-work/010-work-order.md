@@ -1,8 +1,8 @@
 ---
 summary: >-
-  The work order (`2026-11-22`): fix the console script with no `main`;
-  decide on the unmerged `claude/editor-test-gradient`; in `editor/biome.json`,
-  lint `coverage.mjs` and drop the HTML `tabindex` exemption.
+  The work order (`2026-11-22`): fix the console script with no `main`; in
+  `editor/biome.json`, lint `coverage.mjs` and drop the HTML `tabindex`
+  exemption.
 always_read: true
 ---
 
@@ -16,10 +16,7 @@ than a fix, record it at the end of History.
    `main`, so the command every install puts on the path fails with
    `ImportError`. Decide whether the package should have a command; then
    either write `main` with a test, or drop `[project.scripts]`.
-2. **`claude/editor-test-gradient`.** One commit, `82fe662`, not merged: the
-   browser test uses a gradient photo so that crops and flips show. Merge it
-   or delete the branch.
-3. **`editor/biome.json`.** Add `coverage.mjs` to `files.includes`, so
+2. **`editor/biome.json`.** Add `coverage.mjs` to `files.includes`, so
    `pnpm run lint` checks it as it does `build.mjs`; and drop the override
    that turns off `a11y/noNoninteractiveTabindex` for `src/**/*.html`, which
    nothing needs since `0bb7961` removed the viewer's `tabindex`. An agent's

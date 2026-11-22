@@ -52,7 +52,7 @@ this document" under Rules holds those rules.
 
 **Ongoing work**: what is in progress, in the order to take it up.
 
-- [Work order](040-ongoing-work/010-work-order.md) (*always read*) — The work order (`2026-11-22`): fix the console script with no `main`; decide on the unmerged `claude/editor-test-gradient`; in `editor/biome.json`, lint `coverage.mjs` and drop the HTML `tabindex` exemption.
+- [Work order](040-ongoing-work/010-work-order.md) (*always read*) — The work order (`2026-11-22`): fix the console script with no `main`; in `editor/biome.json`, lint `coverage.mjs` and drop the HTML `tabindex` exemption.
 
 **Future work**: recorded directions nobody has started.
 
