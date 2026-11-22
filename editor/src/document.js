@@ -113,7 +113,7 @@ export async function analyse() {
     const perPage = await Promise.all(Array.from({ length: doc.numPages },
       async (_, p) => (await doc.getPage(p + 1)).getAnnotations({ intent: 'display' })));
     perPage.forEach((annots, p) => {
-      const ordinal = state.pageInfo.slice(0, p + 1).filter(info => !info.added).length - 1;
+      const ordinal = state.pageInfo.slice(0, p + 1).filter(entry => !entry.added).length - 1;
       for (const o of annots) {
         if (o.fieldName?.startsWith('img_') && o.rect) state.slots.push({ name: o.fieldName.slice(4), ordinal, rect: o.rect });
       }

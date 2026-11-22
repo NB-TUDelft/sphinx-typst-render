@@ -4,7 +4,8 @@ Builds a small Sphinx site with one fillable worksheet, opens it in the
 shipped editor, fills it in, exports it, and opens the export again to check
 that the parked editable layer comes back: same fields, same image, overflow
 pages dropped, and a second export identical to the first. It also checks
-the restore bar that offers saved work after a reload. Screenshots and a
+the restore bar that offers saved work after a reload, image pages, old saves
+moving to their document's key, printing, and deleting saved work. Screenshots and a
 report.md go to editor-test/<date>/. Exit code 0 means PASS, 1 means FAIL.
 
 Needs the editor bundle built (`pnpm run check` in editor/) plus playwright
@@ -43,6 +44,31 @@ TODAY = datetime.now().strftime("%Y-%m-%d")
 OUT_DIR = REPO / "editor-test" / TODAY
 PARK_KEY = "/FORMEditable"  # default label_prefix, see editor/src/config.js
 PAGE_COUNT_JS = "window.typstRenderEditor.state().pageInfo.length"
+STORE = "typst-render-editor"  # the default storage name
+OLD_SAVE, NEW_SAVE = "2026-01-01T00:00:00.000Z", "2026-02-01T00:00:00.000Z"
+
+# Seeds the editor's IndexedDB store with [key, time, byte count] saves, or
+# dumps it as {key: [byte count, time]}.
+IDB_JS = """async ([name, op, entries]) => {
+  const db = await new Promise((res, rej) => { const r = indexedDB.open(name, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('autosave');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  const run = (mode, fn) => new Promise((res, rej) => { const t = db.transaction('autosave', mode);
+    const q = fn(t.objectStore('autosave')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); });
+  let out = null;
+  if (op === 'seed') for (const [k, time, n] of entries) await run('readwrite', s => s.put({ bytes: new Uint8Array(n), time }, k));
+  if (op === 'dump') { out = {}; for (const k of await run('readonly', s => s.getAllKeys())) {
+    const v = await run('readonly', s => s.get(k)); out[k] = [v?.bytes?.length ?? null, v?.time ?? null]; } }
+  db.close();
+  return out;
+}"""
+
+# Counts the pages a print puts into #printContainer, then prints.
+PRINT_JS = """() => { window.__printed = [];
+  new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => {
+    if (n.classList?.contains('printedPage')) window.__printed.push(n.querySelector('img')); })))
+    .observe(document.getElementById('printContainer'), { childList: true });
+  window.print(); }"""
 
 SHEET = """\
 #import "/_typst_lib/capture_field.typ": capture_field, text_field, textarea_field
@@ -89,6 +115,8 @@ def build_site(work):
     (src / "conf.py").write_text(
         'extensions = ["sphinx_typst_render"]\n'
         'typst_render_open = ["editor"]\n'
+        # Two old keys of one document, for the save-migration check.
+        'typst_render_editor = {"aliases": {"old_a": "merged", "old_b": "merged"}}\n'
     )
     (src / "sheet.typ").write_text(SHEET)
     (src / "index.rst").write_text("Test\n====\n\n.. typst:: sheet.typ\n   :label: Sheet\n   :fillable:\n")
@@ -357,6 +385,7 @@ def run_suite():
                        pg.evaluate("""(name) => !!window.typstRenderEditor.state().images['slot:' + name]""",
                                    image_page_slots[0]),
                        "image appeared after pressing Insert image")
+                check_saves_and_print(pg, cov, record)
                 cov.save()
                 ctx.close()
             finally:
@@ -364,6 +393,47 @@ def run_suite():
                 httpd.shutdown()
 
     return write_report(states)
+
+
+def check_saves_and_print(pg, cov, record):
+    """Saves moving to their document's key, printing, and deleting saved work."""
+    # Two old saves of one document meet (aliases in conf.py): the newer
+    # becomes the save, the older is kept as an older save.
+    pg.evaluate(IDB_JS, [STORE, "seed", [["old_a", OLD_SAVE, 3], ["old_b", NEW_SAVE, 4]]])
+    cov.save()
+    pg.reload()
+    wait_editor(pg)
+    deadline = time.time() + 15
+    while "old_a" in (saves := pg.evaluate(IDB_JS, [STORE, "dump", []])) and time.time() < deadline:
+        time.sleep(0.25)
+    record("19_old_saves_merged",
+           saves.get("merged") == [4, NEW_SAVE] and saves.get(f"prev:merged:{OLD_SAVE}") == [3, OLD_SAVE]
+           and "old_a" not in saves and "old_b" not in saves, str(saves))
+
+    # Printing renders every page into #printContainer, one after another.
+    pages = pg.evaluate(PAGE_COUNT_JS)
+    pg.evaluate(PRINT_JS)
+    pg.wait_for_function("n => window.__printed.length === n", arg=pages, timeout=30000)
+    record("20_print_renders_every_page",
+           pg.evaluate("() => window.__printed.every(img => img.naturalWidth > 0)"), f"{pages} page(s)")
+
+    # Deleting this worksheet's saved work leaves other documents' saves alone.
+    before = pg.evaluate(IDB_JS, [STORE, "dump", []])
+    pg.click("#lbPrivacy")
+    pg.click("#lbClearThis")
+    pg.click("#lbConfirmOk")
+    pg.wait_for_timeout(300)  # the second confirmation replaces the first
+    with pg.expect_navigation(timeout=15000):  # the editor reloads once it is done
+        pg.click("#lbConfirmOk")
+        # The toast of an earlier step may still be up; wait for this one.
+        toast = pg.locator(".lb-toast", has_text="deleted").inner_text(timeout=10000)
+        cov.save()
+    wait_editor(pg)
+    after = pg.evaluate(IDB_JS, [STORE, "dump", []])
+    mine = [k for k in before if k == "sheet" or k.startswith("prev:sheet:")]
+    record("21_delete_removes_only_this_worksheet",
+           "deleted" in toast and bool(mine) and not any(k in after for k in mine) and "merged" in after,
+           f"{toast!r}; before={sorted(before)} after={sorted(after)}")
 
 
 def write_report(states):
