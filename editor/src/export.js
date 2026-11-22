@@ -255,9 +255,8 @@ function overflowing({ texts, font, charset }) {
 
 // The student's choice for one answer that does not fit: shrink it, or move
 // its end ('overflow', the default) or all of it to pages after the document.
-function settleOverflow(x, o, picked) {
-  let c = picked || 'overflow';
-  if (c === 'shrink' && !o.shrinkTo) c = 'overflow';
+function settleOverflow(x, o, picked = 'overflow') {
+  const c = picked === 'shrink' && !o.shrinkTo ? 'overflow' : picked;   // shrinking is offered only when it fits
   if (c === 'shrink') {
     o.t.opts = { size: o.shrinkTo };
     x.exact.overflow[o.name] = { choice: c, size: o.shrinkTo };
