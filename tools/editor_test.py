@@ -432,6 +432,7 @@ def run_suite():
                     "image appeared after pressing Insert image",
                 )
                 check_saves_and_print(pg, cov, record)
+                check_editing_flows(pg, cov, record)
                 cov.save()
                 ctx.close()
             finally:
@@ -490,6 +491,117 @@ def check_saves_and_print(pg, cov, record):
         "deleted" in toast and bool(mine) and not any(k in after for k in mine) and "merged" in after,
         f"{toast!r}; before={sorted(before)} after={sorted(after)}",
     )
+
+
+IDLE_PAGES_JS = """n => !document.body.classList.contains('lb-busy')
+    && window.typstRenderEditor.state().pageInfo.length === n"""
+
+
+def check_editing_flows(pg, cov, record):
+    """Text pages, dialogs, live hints, exporting from the toolbar, the page overview, zoom,
+    downloading an editable copy, and restoring saved work after a reload."""
+    # A text page goes at the end and is shown; a page the student added can be deleted.
+    pages = pg.evaluate(PAGE_COUNT_JS)
+    pg.click("#lbInsertBlank")
+    pg.click("#lbTextPageOk")
+    pg.wait_for_function(IDLE_PAGES_JS, arg=pages + 1, timeout=30000)
+    added = pg.evaluate("window.typstRenderEditor.state().pageInfo.at(-1)")
+    shown = pg.input_value("#lbPageNumber")
+    record(
+        "22_text_page_added_and_shown",
+        added["added"] and added["kind"] == "text" and shown == str(pages + 1),
+        f"kind={added['kind']}, page {shown}",
+    )
+    pg.click("#lbDeletePage")
+    pg.click("#lbConfirmOk")
+    pg.wait_for_function(IDLE_PAGES_JS, arg=pages, timeout=30000)
+    record("23_added_page_deleted", pg.evaluate(PAGE_COUNT_JS) == pages, f"{pages} page(s) again")
+
+    # Live hints follow the box with focus: a full single-line box, and a long answer whose end will move.
+    hinted = """() => document.querySelector('[name="name"]')?.dataset.lbHint === '1'
+        && document.querySelector('[name="preparation"]')?.dataset.lbHint === '1'"""
+    pg.wait_for_function(hinted, timeout=15000)  # hints attach once the page's fields and font are read
+    pg.fill('[name="name"]', "W" * 300)
+    full = pg.locator(".lb-hint").inner_text(timeout=5000)
+    pg.fill('[name="preparation"]', "A very long answer. " * 120)
+    pg.wait_for_selector(".lb-mirror mark", timeout=5000)
+    moving = pg.locator(".lb-hint").inner_text(timeout=5000)
+    record("24_live_hints", "box is full" in full and "Too long" in moving, f"{full!r} / {moving!r}")
+
+    # Exporting from the toolbar asks what to do with the answer that does not fit, then downloads.
+    pg.keyboard.press("Tab")  # pdf.js commits the answer on blur
+    pg.click("#lbExport")
+    pg.click('.lb-ov-btn[data-field="preparation"][data-choice="all"]')
+    with pg.expect_download(timeout=30000) as download:
+        pg.click("#lbOverflowOk")
+    exported = OUT_DIR / "toolbar_export.pdf"
+    download.value.save_as(exported)
+    overflow = json.loads(PdfReader(exported).metadata["/LogbookFields"])["overflow"]
+    record(
+        "25_toolbar_export_asks_then_downloads",
+        overflow.get("preparation", {}).get("choice") == "all",
+        f"overflow={ {k: v.get('choice') for k, v in overflow.items()} }",
+    )
+
+    # A dialog keeps Tab inside itself, both ways, and Escape cancels it.
+    pg.click("#lbInsertBlank")
+    pg.wait_for_selector("#lbTextPageOk")
+    inside = []
+    for key in ["Tab"] * 5 + ["Shift+Tab"] * 5:
+        pg.keyboard.press(key)
+        inside.append(pg.evaluate("!!document.activeElement.closest('.lb-modal')"))
+    pg.keyboard.press("Escape")
+    record(
+        "26_dialog_keeps_focus_and_escape_cancels",
+        all(inside) and pg.locator("#lbTextPageOk").count() == 0 and pg.evaluate(PAGE_COUNT_JS) == pages,
+        f"focus inside the dialog after each key: {all(inside)}",
+    )
+
+    # The page overview closes and opens again, with a thumbnail of every page.
+    states = []
+    for _ in range(2):
+        pg.click("#lbSidebar")
+        pg.wait_for_timeout(300)
+        states.append(pg.evaluate("document.body.classList.contains('lb-side-open')"))
+    pg.wait_for_function("() => [...document.querySelectorAll('#lbSide canvas')].some(c => c.width > 0)", timeout=10000)
+    record("27_page_overview_toggles", states[0] != states[1], f"open after each click: {states}")
+
+    # Zoom buttons and keys: in, out, and back to fitting the page.
+    zooms = [pg.inner_text("#lbZoomValue")]
+    for act in ["#lbZoomIn", "#lbZoomOut", "Control+=", "Control+-", "Control+0"]:
+        if act.startswith("#"):
+            pg.click(act)
+        else:
+            pg.keyboard.press(act)
+        pg.wait_for_timeout(300)
+        zooms.append(pg.inner_text("#lbZoomValue"))
+    record("28_zoom", zooms[1] != zooms[0] and zooms[3] != zooms[2] and zooms[4] != zooms[3], " → ".join(zooms))
+
+    # "Download to keep filling in elsewhere" saves the editable PDF, form and all.
+    pg.click("#lbMore")
+    with pg.expect_download(timeout=30000) as download:
+        pg.click("#lbMenuSave")
+    copy = OUT_DIR / "editable_copy.pdf"
+    download.value.save_as(copy)
+    record("29_download_editable_copy", "/AcroForm" in PdfReader(copy).trailer["/Root"], "the copy keeps its form")
+
+    # After a reload, "Restore my work" brings the saved answer back; "Start fresh" deletes the save.
+    set_field(pg, "name", "Restore me")
+    pg.evaluate("window.typstRenderEditor.autosaveNow(true).then(() => true)")
+    cov.save()
+    pg.reload()
+    wait_editor(pg)
+    pg.click("#lbRestoreYes")
+    pg.locator(".lb-toast", has_text="restored").wait_for(timeout=15000)
+    pg.wait_for_function("""() => document.querySelector('[name="name"]')?.value === 'Restore me'""", timeout=15000)
+    cov.save()
+    pg.reload()
+    wait_editor(pg)
+    pg.click("#lbRestoreNo")
+    pg.click("#lbConfirmOk")
+    pg.wait_for_selector(".lb-restore", state="detached", timeout=10000)
+    saves = pg.evaluate(IDB_JS, [STORE, "dump", []])
+    record("30_restore_or_start_fresh", "sheet" not in saves, f"saves after starting fresh: {sorted(saves)}")
 
 
 def write_report(states):

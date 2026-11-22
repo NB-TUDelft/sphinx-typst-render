@@ -90,11 +90,18 @@ export const onZoom = () => {
     for (const u of liveUpdates) u();
   });
 };
-const fieldsByPage = {}; // pageNumber -> Promise<[{id, rect, multi, start}]>
+// pdfDocument -> {pageNumber -> Promise<[{id, rect, multi, start}]>}. Kept per
+// document, because the document changes under the same page numbers: an
+// export opens flattened, with no fields, before its editable layer is put
+// back, and every page added or deleted reopens it.
+const fieldsByDoc = new WeakMap();
 function pageFields(pageNumber) {
+  const doc = app().pdfDocument;
+  if (!fieldsByDoc.has(doc)) fieldsByDoc.set(doc, {});
+  const fieldsByPage = fieldsByDoc.get(doc);
   if (!fieldsByPage[pageNumber]) {
-    fieldsByPage[pageNumber] = app()
-      .pdfDocument.getPage(pageNumber)
+    fieldsByPage[pageNumber] = doc
+      .getPage(pageNumber)
       .then((p) => p.getAnnotations())
       .then((list) =>
         list
