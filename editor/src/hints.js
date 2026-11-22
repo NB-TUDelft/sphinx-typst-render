@@ -105,62 +105,97 @@ export function attachHints(pageNumber) {
   Promise.all([pageFields(pageNumber), liveFont()]).then(([fields, font]) => {
     for (const f of fields) {
       const el = pv.div.querySelector(`.annotationLayer [data-element-id="${f.id}"]`);
-      if (!el || el.dataset.lbHint) continue;
-      el.dataset.lbHint = '1';
-      let mirror = null, hint = null, sbWidth = 0;
-      // Sizes and positions as calc(... * var(--total-scale-factor)), like pdf.js's
-      // own, so they follow the zoom without being set again.
-      const scaled = px => `calc(${px}px * var(--total-scale-factor))`;
-      const place = () => {
-        const v = pv.viewport;
-        const [ax, ay] = v.convertToViewportPoint(f.b.x1, f.b.y1);
-        const [bx, by] = v.convertToViewportPoint(f.b.x2, f.b.y2);
-        return { left: scaled(Math.min(ax, bx) / v.scale), top: scaled((Math.max(ay, by) + 3) / v.scale) };
-      };
-      const update = () => {
-        if (!el.isConnected) { liveUpdates.delete(update); return; }
-        const text = el.value.replace(/\r\n?/g, '\n');
-        el.style.fontSize = scaled(f.start);            // always the box's own size; shrinking is an export choice
-        const m = measure(f, font, text);
-        if (!f.multi) {
-          if (el.dataset.lbOwnMax === undefined) el.dataset.lbOwnMax = String(el.maxLength > 0 ? el.maxLength : Infinity);
-          const own = +el.dataset.lbOwnMax;
-          el.maxLength = Math.min(own, text.length + Math.max(0, m.left));
-        }
-        // yellow mark on the part that moves
-        if (f.multi && m.cut !== undefined) {
-          if (!mirror) { mirror = $('div', { class: 'lb-mirror', 'aria-hidden': 'true' }); el.before(mirror); }
-          const cs = getComputedStyle(el);
-          for (const p of ['font', 'letterSpacing', 'lineHeight', 'padding', 'textAlign', 'borderWidth', 'borderStyle', 'boxSizing'])
-            mirror.style[p] = cs[p];
-          mirror.style.borderColor = 'transparent';
-          mirror.style.right = 'auto';
-          // As wide as the box minus its scrollbar, so lines wrap where the box wraps them.
-          // Measured only while the box is shown: pdf.js hides the layer for a moment on zoom.
-          if (el.offsetWidth) sbWidth = el.offsetWidth - el.clientWidth - Number.parseFloat(cs.borderLeftWidth) - Number.parseFloat(cs.borderRightWidth);
-          mirror.style.width = `calc(100% - ${sbWidth}px)`;
-          mirror.replaceChildren(document.createTextNode(text.slice(0, m.cut)), $('mark', {}, text.slice(m.cut) || ' '));
-          mirror.scrollTop = el.scrollTop;
-        } else if (mirror) { mirror.remove(); mirror = null; }
-        // the hint, only while this box has focus
-        const focused = document.activeElement === el;
-        let msg = null;
-        if (focused && m.moved) msg = 'Too long for this box. When you export, the yellow part moves to an extra page, after a full stop or a new line.';
-        else if (focused && m.left <= 0) msg = 'This box is full. To write more, add a Text page.';
-        else if (focused && m.left <= HINT_FROM) msg = `${m.left} characters left`;
-        if (focused) for (const other of document.querySelectorAll('.lb-hint')) if (other !== hint) other.remove();   // one at a time
-        if (!msg) { if (hint) { hint.remove(); hint = null; } return; }
-        if (!hint?.isConnected) { hint = $('div', { class: 'lb-hint', role: 'status' }); pv.div.append(hint); }
-        hint.className = 'lb-hint' + (m.moved || m.left <= 0 ? ' lb-warn' : '');
-        hint.textContent = msg;
-        Object.assign(hint.style, place());
-      };
-      liveUpdates.add(update);
-      el.addEventListener('input', update);
-      el.addEventListener('focus', update);
-      el.addEventListener('blur', update);
-      el.addEventListener('scroll', () => { if (mirror) mirror.scrollTop = el.scrollTop; });
-      update();
+      if (el && !el.dataset.lbHint) hintBox(pv, f, font, el);
     }
   }).catch(err => console.warn('[typst-editor] live hints', err));
+}
+
+// Sizes and positions as calc(... * var(--total-scale-factor)), like pdf.js's
+// own, so they follow the zoom without being set again.
+const scaled = px => `calc(${px}px * var(--total-scale-factor))`;
+const MIRRORED = ['font', 'letterSpacing', 'lineHeight', 'padding', 'textAlign', 'borderWidth', 'borderStyle', 'boxSizing'];
+
+// Live hints on one box, kept up to date as the student types, focuses and zooms.
+function hintBox(pv, f, font, el) {
+  el.dataset.lbHint = '1';
+  const box = { el, pv, mirror: null, hint: null, sbWidth: 0 };
+  const place = () => {
+    const v = pv.viewport;
+    const [ax, ay] = v.convertToViewportPoint(f.b.x1, f.b.y1);
+    const [bx, by] = v.convertToViewportPoint(f.b.x2, f.b.y2);
+    return { left: scaled(Math.min(ax, bx) / v.scale), top: scaled((Math.max(ay, by) + 3) / v.scale) };
+  };
+  const update = () => {
+    if (!el.isConnected) { liveUpdates.delete(update); return; }
+    const text = el.value.replace(/\r\n?/g, '\n');
+    el.style.fontSize = scaled(f.start);                        // always the box's own size; shrinking is an export choice
+    const m = measure(f, font, text);
+    if (!f.multi) capLength(el, text, m);
+    markMoving(box, text, f.multi ? m.cut : undefined);         // yellow mark on the part that moves
+    // the hint, only while this box has focus, and one at a time
+    const focused = document.activeElement === el;
+    if (focused) removeOtherHints(box.hint);
+    showHint(box, focused ? hintMessage(m) : null, m.moved || m.left <= 0, place);
+  };
+  liveUpdates.add(update);
+  el.addEventListener('input', update);
+  el.addEventListener('focus', update);
+  el.addEventListener('blur', update);
+  el.addEventListener('scroll', () => { if (box.mirror) box.mirror.scrollTop = el.scrollTop; });
+  update();
+}
+
+// A single-line box takes no more characters than fit, nor more than its own cap.
+function capLength(el, text, m) {
+  if (el.dataset.lbOwnMax === undefined) el.dataset.lbOwnMax = String(el.maxLength > 0 ? el.maxLength : Infinity);
+  el.maxLength = Math.min(+el.dataset.lbOwnMax, text.length + Math.max(0, m.left));
+}
+
+// A mirror of the box behind it, with the text from `cut` on marked; removed
+// when nothing is cut.
+function markMoving(box, text, cut) {
+  const { el } = box;
+  if (cut === undefined) {
+    box.mirror?.remove();
+    box.mirror = null;
+    return;
+  }
+  if (!box.mirror) { box.mirror = $('div', { class: 'lb-mirror', 'aria-hidden': 'true' }); el.before(box.mirror); }
+  const mirror = box.mirror, cs = getComputedStyle(el);
+  for (const p of MIRRORED) mirror.style[p] = cs[p];
+  mirror.style.borderColor = 'transparent';
+  mirror.style.right = 'auto';
+  // As wide as the box minus its scrollbar, so lines wrap where the box wraps them.
+  // Measured only while the box is shown: pdf.js hides the layer for a moment on zoom.
+  if (el.offsetWidth) box.sbWidth = el.offsetWidth - el.clientWidth - Number.parseFloat(cs.borderLeftWidth) - Number.parseFloat(cs.borderRightWidth);
+  mirror.style.width = `calc(100% - ${box.sbWidth}px)`;
+  mirror.replaceChildren(document.createTextNode(text.slice(0, cut)), $('mark', {}, text.slice(cut) || ' '));
+  mirror.scrollTop = el.scrollTop;
+}
+
+// What the hint says about a measured answer, or null for no hint.
+function hintMessage(m) {
+  if (m.moved) return 'Too long for this box. When you export, the yellow part moves to an extra page, after a full stop or a new line.';
+  if (m.left <= 0) return 'This box is full. To write more, add a Text page.';
+  if (m.left <= HINT_FROM) return `${m.left} characters left`;
+  return null;
+}
+
+function removeOtherHints(mine) {
+  for (const other of document.querySelectorAll('.lb-hint')) {
+    if (other !== mine) other.remove();
+  }
+}
+
+// The box's hint, placed under it, or none when `msg` is null.
+function showHint(box, msg, warn, place) {
+  if (!msg) {
+    box.hint?.remove();
+    box.hint = null;
+    return;
+  }
+  if (!box.hint?.isConnected) { box.hint = $('div', { class: 'lb-hint', role: 'status' }); box.pv.div.append(box.hint); }
+  box.hint.className = 'lb-hint' + (warn ? ' lb-warn' : '');
+  box.hint.textContent = msg;
+  Object.assign(box.hint.style, place());
 }

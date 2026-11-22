@@ -27,23 +27,29 @@ export const loadFontkit = () => import('@pdf-lib/fontkit').then(m => m.default)
 // paragraph is an empty line.
 export function wrapLines(text, font, size, width) {
   const out = [];
-  for (const para of text.split('\n')) {
-    let line = null;                                            // null: nothing on this line yet
-    for (const word of para.split(' ')) {
-      const tryLine = line === null ? word : line + ' ' + word;
-      if (font.widthOfTextAtSize(tryLine, size) <= width) { line = tryLine; continue; }
-      if (word === '') continue;                                // extra space at a line end
-      if (line) out.push(line);
-      let piece = '';
-      for (const ch of word) {                                  // words longer than the box
-        if (font.widthOfTextAtSize(piece + ch, size) > width && piece) { out.push(piece); piece = ''; }
-        piece += ch;
-      }
-      line = piece;
-    }
-    out.push(line ?? '');
-  }
+  for (const para of text.split('\n')) wrapParagraph(para, font, size, width, out);
   return out;
+}
+function wrapParagraph(para, font, size, width, out) {
+  let line = null;                                              // null: nothing on this line yet
+  for (const word of para.split(' ')) {
+    const tryLine = line === null ? word : line + ' ' + word;
+    if (font.widthOfTextAtSize(tryLine, size) <= width) { line = tryLine; continue; }
+    if (word === '') continue;                                  // extra space at a line end
+    if (line) out.push(line);
+    line = breakWord(word, font, size, width, out);
+  }
+  out.push(line ?? '');
+}
+// A word that starts a line, cut where it is wider than the box: the full
+// pieces go to `out`, and the last one, which starts the line, is returned.
+function breakWord(word, font, size, width, out) {
+  let piece = '';
+  for (const ch of word) {
+    if (font.widthOfTextAtSize(piece + ch, size) > width && piece) { out.push(piece); piece = ''; }
+    piece += ch;
+  }
+  return piece;
 }
 
 // Text fitting, shared by the export and the live hints. Boxes never grow:
@@ -97,7 +103,9 @@ export function splitPoint(font, text, w, h, size, extraLines) {
     || lastOk([...text.matchAll(/\s+/g)].map(m => m.index));
 }
 
-export function drawFieldText(page, font, charset, rect, value, da, ff, q, opts = {}) {
+// A field's value painted into its box: `field` holds its rect, value, DA
+// string, flags (ff) and alignment (q), as the export reads them.
+export function drawFieldText(page, font, charset, { rect, value, da, ff, q }, opts = {}) {
   const { x1, x2, y1, y2, w, h } = boxOf(rect);
   const text = [...value.replace(/\r\n?/g, '\n')]
     .map(c => (c === '\n' || charset.has(c.codePointAt(0))) ? c : '?').join('');
