@@ -3,7 +3,9 @@
 
 let badge;
 
-export function bindBadge(el) { badge = el; }
+export function bindBadge(el) {
+  badge = el;
+}
 
 export function setSaveBadge(text, tone = '') {
   if (!badge) return;

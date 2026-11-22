@@ -14,7 +14,7 @@ import { inSequence } from './util.js';
 
 // The runtime files sit beside this bundle (see build.mjs).
 const HERE = new URL('.', import.meta.url);
-export const assetUrl = path => new URL(path, HERE).href;
+export const assetUrl = (path) => new URL(path, HERE).href;
 
 // The worker carries this bundle's ?v= cache key, so a new release is not
 // mixed with a cached worker of the previous one.
@@ -66,11 +66,13 @@ class Viewer {
     this.eventBus.on('switchannotationeditorparams', ({ type, value }) => {
       this.pdfViewer.annotationEditorParams = { type, value };
     });
-    globalThis.addEventListener('keydown', e => this.#onKeyDown(e));
-    container.addEventListener('wheel', e => this.#onWheel(e), { passive: false });
+    globalThis.addEventListener('keydown', (e) => this.#onKeyDown(e));
+    container.addEventListener('wheel', (e) => this.#onWheel(e), { passive: false });
     // A print started from a script goes through the rendering below, as in
     // the stock viewer, which also replaces window.print.
-    globalThis.print = () => { void this.print(); };
+    globalThis.print = () => {
+      void this.print();
+    };
   }
 
   get pagesCount() {
@@ -105,9 +107,8 @@ class Viewer {
     const oldTask = this.#loadingTask;
     this.#loadingTask = task;
     this.pdfDocument = doc;
-    this.filename = filename
-      || (url ? decodeURIComponent(new URL(url).pathname.split('/').pop()) : 'document.pdf');
-    const pagesInit = new Promise(resolve => this.eventBus.on('pagesinit', resolve, { once: true }));
+    this.filename = filename || (url ? decodeURIComponent(new URL(url).pathname.split('/').pop()) : 'document.pdf');
+    const pagesInit = new Promise((resolve) => this.eventBus.on('pagesinit', resolve, { once: true }));
     this.pdfViewer.setDocument(doc);
     this.linkService.setDocument(doc);
     await pagesInit;
@@ -119,7 +120,9 @@ class Viewer {
   // "Import a PDF": a PDF from this computer replaces the open one.
   openFile() {
     const input = Object.assign(document.createElement('input'), {
-      type: 'file', accept: '.pdf,application/pdf', className: 'lb-hidden-input',
+      type: 'file',
+      accept: '.pdf,application/pdf',
+      className: 'lb-hidden-input',
     });
     input.addEventListener('change', async () => {
       const file = input.files[0];
@@ -160,7 +163,9 @@ class Viewer {
       delete document.body.dataset.printing;
       container.replaceChildren();
       pageSize.remove();
-      urls.forEach(u => { URL.revokeObjectURL(u); });
+      urls.forEach((u) => {
+        URL.revokeObjectURL(u);
+      });
       this.#printing = false;
     };
     try {
@@ -168,7 +173,7 @@ class Viewer {
       const first = (await doc.getPage(1)).getViewport({ scale: 1 });
       pageSize.textContent = `@page { size: ${first.width}pt ${first.height}pt; margin: 0; }`;
       document.head.append(pageSize);
-      const printPage = async n => {
+      const printPage = async (n) => {
         const page = await doc.getPage(n);
         const viewport = page.getViewport({ scale: 1 });
         const canvas = document.createElement('canvas');
@@ -178,13 +183,15 @@ class Viewer {
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         await page.render({
-          canvas, canvasContext: ctx, viewport,
+          canvas,
+          canvasContext: ctx,
+          viewport,
           transform: [PRINT_UNITS, 0, 0, PRINT_UNITS, 0, 0],
           intent: 'print',
           annotationMode: AnnotationMode.ENABLE_STORAGE,
           printAnnotationStorage: storage,
         }).promise;
-        const blob = await new Promise(resolve => canvas.toBlob(resolve));
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve));
         const img = document.createElement('img');
         img.src = URL.createObjectURL(blob);
         urls.push(img.src);
@@ -195,7 +202,10 @@ class Viewer {
         await img.decode();
       };
       // One page at a time, in order: each holds a full-size canvas while it renders.
-      await inSequence(Array.from({ length: doc.numPages }, (_, i) => i + 1), printPage);
+      await inSequence(
+        Array.from({ length: doc.numPages }, (_, i) => i + 1),
+        printPage,
+      );
     } catch (error) {
       cleanup();
       throw error;
@@ -214,12 +224,26 @@ class Viewer {
   #onKeyDown(e) {
     if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
     switch (e.key) {
-      case '+': case '=': this.pdfViewer.increaseScale(); break;
-      case '-': this.pdfViewer.decreaseScale(); break;
-      case '0': this.pdfViewer.currentScaleValue = 'auto'; break;
-      case 'p': case 'P': this.print().catch(error => console.error('[typst-editor] print', error)); break;
-      case 'o': case 'O': this.openFile(); break;
-      default: return;
+      case '+':
+      case '=':
+        this.pdfViewer.increaseScale();
+        break;
+      case '-':
+        this.pdfViewer.decreaseScale();
+        break;
+      case '0':
+        this.pdfViewer.currentScaleValue = 'auto';
+        break;
+      case 'p':
+      case 'P':
+        this.print().catch((error) => console.error('[typst-editor] print', error));
+        break;
+      case 'o':
+      case 'O':
+        this.openFile();
+        break;
+      default:
+        return;
     }
     e.preventDefault();
   }

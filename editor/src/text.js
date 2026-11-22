@@ -20,7 +20,7 @@ export async function loadFieldFont() {
 
 // fontkit embeds that font in the export. Nothing else needs it, so the build
 // splits it into a chunk of its own that loads on first use.
-export const loadFontkit = () => import('@pdf-lib/fontkit').then(m => m.default);
+export const loadFontkit = () => import('@pdf-lib/fontkit').then((m) => m.default);
 
 // Lines as a textarea shows them: every space counts (leading and repeated
 // spaces too), a space at the end of a full line hangs there, and an empty
@@ -31,11 +31,14 @@ export function wrapLines(text, font, size, width) {
   return out;
 }
 function wrapParagraph(para, font, size, width, out) {
-  let line = null;                                              // null: nothing on this line yet
+  let line = null; // null: nothing on this line yet
   for (const word of para.split(' ')) {
     const tryLine = line === null ? word : line + ' ' + word;
-    if (font.widthOfTextAtSize(tryLine, size) <= width) { line = tryLine; continue; }
-    if (word === '') continue;                                  // extra space at a line end
+    if (font.widthOfTextAtSize(tryLine, size) <= width) {
+      line = tryLine;
+      continue;
+    }
+    if (word === '') continue; // extra space at a line end
     if (line) out.push(line);
     line = breakWord(word, font, size, width, out);
   }
@@ -46,7 +49,10 @@ function wrapParagraph(para, font, size, width, out) {
 function breakWord(word, font, size, width, out) {
   let piece = '';
   for (const ch of word) {
-    if (font.widthOfTextAtSize(piece + ch, size) > width && piece) { out.push(piece); piece = ''; }
+    if (font.widthOfTextAtSize(piece + ch, size) > width && piece) {
+      out.push(piece);
+      piece = '';
+    }
     piece += ch;
   }
   return piece;
@@ -55,10 +61,14 @@ function breakWord(word, font, size, width, out) {
 // Text fitting, shared by the export and the live hints. Boxes never grow:
 // text is drawn at the box's own size, and only shrinks when the student
 // picks that, never below MIN_PT.
-export const MIN_PT = 6, PAD = 2, LEAD = 1.2;
-export const boxOf = rect => {
-  const x1 = Math.min(rect[0], rect[2]), x2 = Math.max(rect[0], rect[2]);
-  const y1 = Math.min(rect[1], rect[3]), y2 = Math.max(rect[1], rect[3]);
+export const MIN_PT = 6,
+  PAD = 2,
+  LEAD = 1.2;
+export const boxOf = (rect) => {
+  const x1 = Math.min(rect[0], rect[2]),
+    x2 = Math.max(rect[0], rect[2]);
+  const y1 = Math.min(rect[1], rect[3]),
+    y2 = Math.max(rect[1], rect[3]);
   return { x1, x2, y1, y2, w: x2 - x1, h: y2 - y1 };
 };
 // The `count` numbers in front of the operator `op` in a DA string such as
@@ -71,11 +81,10 @@ const operands = (da, op, count) => {
   const numbers = tokens.slice(at - count, at).map(Number);
   return numbers.every(Number.isFinite) ? numbers : null;
 };
-export const daSize = da => operands(da, 'Tf', 1)?.[0] || 0;
-export const startSize = (ff, sizeDA, h) => sizeDA || ((ff & 4096) ? 10 : Math.min(12, (h - 2) / 1.2));
-export const fitsAt = (font, text, multi, w, h, size, extraLines = 0) => multi
-  ? (wrapLines(text, font, size, w - 2 * PAD).length + extraLines) * size * LEAD <= h - 2 * PAD
-  : font.widthOfTextAtSize(text.replaceAll('\n', ' '), size) <= w - 2 * PAD;
+export const daSize = (da) => operands(da, 'Tf', 1)?.[0] || 0;
+export const startSize = (ff, sizeDA, h) => sizeDA || (ff & 4096 ? 10 : Math.min(12, (h - 2) / 1.2));
+export const fitsAt = (font, text, multi, w, h, size, extraLines = 0) =>
+  multi ? (wrapLines(text, font, size, w - 2 * PAD).length + extraLines) * size * LEAD <= h - 2 * PAD : font.widthOfTextAtSize(text.replaceAll('\n', ' '), size) <= w - 2 * PAD;
 // Largest size from `start` down to MIN_PT (1 pt integer steps) at which the text fits; null if none.
 export function fitSize(font, text, multi, w, h, start, extraLines = 0) {
   if (fitsAt(font, text, multi, w, h, start, extraLines)) return start;
@@ -90,40 +99,46 @@ export function fitSize(font, text, multi, w, h, start, extraLines = 0) {
 // finds the last cut that fits: a handful of tries instead of one per word,
 // which kept long answers from freezing the page on every keystroke and zoom.
 export function splitPoint(font, text, w, h, size, extraLines) {
-  const ok = n => fitsAt(font, text.slice(0, n).trimEnd(), true, w, h, size, extraLines);
-  const lastOk = cuts => {
-    let lo = 0, hi = cuts.length - 1, best = 0;
+  const ok = (n) => fitsAt(font, text.slice(0, n).trimEnd(), true, w, h, size, extraLines);
+  const lastOk = (cuts) => {
+    let lo = 0,
+      hi = cuts.length - 1,
+      best = 0;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      if (ok(cuts[mid])) { best = cuts[mid]; lo = mid + 1; } else hi = mid - 1;
+      if (ok(cuts[mid])) {
+        best = cuts[mid];
+        lo = mid + 1;
+      } else hi = mid - 1;
     }
     return best;
   };
-  return lastOk([...text.matchAll(/[.!?](?=\s|$)|\n/g)].map(m => m.index + 1))
-    || lastOk([...text.matchAll(/\s+/g)].map(m => m.index));
+  return lastOk([...text.matchAll(/[.!?](?=\s|$)|\n/g)].map((m) => m.index + 1)) || lastOk([...text.matchAll(/\s+/g)].map((m) => m.index));
 }
 
 // A field's value painted into its box: `field` holds its rect, value, DA
 // string, flags (ff) and alignment (q), as the export reads them.
 export function drawFieldText(page, font, charset, { rect, value, da, ff, q }, opts = {}) {
   const { x1, x2, y1, y2, w, h } = boxOf(rect);
-  const text = [...value.replace(/\r\n?/g, '\n')]
-    .map(c => (c === '\n' || charset.has(c.codePointAt(0))) ? c : '?').join('');
+  const text = [...value.replace(/\r\n?/g, '\n')].map((c) => (c === '\n' || charset.has(c.codePointAt(0)) ? c : '?')).join('');
   let color = rgb(0, 0, 0);
-  const fill = operands(da, 'rg', 3), grey = operands(da, 'g', 1);
-  if (fill) color = rgb(...fill); else if (grey) color = rgb(grey[0], grey[0], grey[0]);
+  const fill = operands(da, 'rg', 3),
+    grey = operands(da, 'g', 1);
+  if (fill) color = rgb(...fill);
+  else if (grey) color = rgb(grey[0], grey[0], grey[0]);
   const xFor = (line, size) => {
     const tw = font.widthOfTextAtSize(line, size);
-    if (q === 1) return x1 + (w - tw) / 2;   // centred
-    if (q === 2) return x2 - PAD - tw;       // right-aligned
+    if (q === 1) return x1 + (w - tw) / 2; // centred
+    if (q === 2) return x2 - PAD - tw; // right-aligned
     return x1 + PAD;
   };
   const start = startSize(ff, daSize(da), h);
   const red = rgb(0.75, 0, 0);
-  if (ff & 4096) {                                              // multi-line
+  if (ff & 4096) {
+    // multi-line
     const size = opts.size || fitSize(font, text, true, w, h, start, opts.ref ? 1 : 0) || MIN_PT;
     const lines = text ? wrapLines(text, font, size, w - 2 * PAD) : [];
-    const yAt = i => y2 - PAD - size * (0.9 + LEAD * i);
+    const yAt = (i) => y2 - PAD - size * (0.9 + LEAD * i);
     lines.forEach((line, i) => {
       if (line && yAt(i) >= y1) page.drawText(line, { x: xFor(line, size), y: yAt(i), size, font, color });
     });

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { $ } from './util.js';
+
 import { app } from './state.js';
-import { loadFieldFont, wrapLines, boxOf, startSize, fitsAt, splitPoint, PAD, LEAD } from './text.js';
+import { boxOf, fitsAt, LEAD, loadFieldFont, PAD, splitPoint, startSize, wrapLines } from './text.js';
+import { $ } from './util.js';
 
 // -------------------------------------------------------------- live hints
 // While typing, measure with the same font and fitting rules as the export:
@@ -17,8 +18,13 @@ async function liveFont() {
   document.fonts.add(face);
   const cx = document.createElement('canvas').getContext('2d');
   // pt and px scale alike, so a width at "size px" is the width at size pt.
-  measurer = { widthOfTextAtSize: (s, size) => { cx.font = `${size}px LbLiberation`; return cx.measureText(s).width; } };
-  measurer.avg = size => measurer.widthOfTextAtSize('etaoinshrdlucmfwyp ', size) / 19;
+  measurer = {
+    widthOfTextAtSize: (s, size) => {
+      cx.font = `${size}px LbLiberation`;
+      return cx.measureText(s).width;
+    },
+  };
+  measurer.avg = (size) => measurer.widthOfTextAtSize('etaoinshrdlucmfwyp ', size) / 19;
   return measurer;
 }
 // pdf.js hides the form layer for a moment while it redraws at a new zoom,
@@ -31,13 +37,15 @@ export const MAX_ZOOM = 4;
 let zoomFocus = null;
 export function keepFocusThroughZoom() {
   const el = document.activeElement;
-  if (el?.closest?.('.annotationLayer') && 'selectionStart' in el)
-    zoomFocus = { el, start: el.selectionStart, end: el.selectionEnd, scroll: el.scrollTop };
+  if (el?.closest?.('.annotationLayer') && 'selectionStart' in el) zoomFocus = { el, start: el.selectionStart, end: el.selectionEnd, scroll: el.scrollTop };
   if (!zoomFocus) return;
-  const z = zoomFocus, running = !!z.until;
+  const z = zoomFocus,
+    running = !!z.until;
   z.until = performance.now() + 10000;
   if (running) return;
-  const elsewhere = e => { if (!z.el.contains(e.target) && !e.ctrlKey && !e.metaKey && e.key !== 'Control') stop(); };
+  const elsewhere = (e) => {
+    if (!z.el.contains(e.target) && !e.ctrlKey && !e.metaKey && e.key !== 'Control') stop();
+  };
   const stop = () => {
     if (zoomFocus === z) zoomFocus = null;
     document.removeEventListener('pointerdown', elsewhere, true);
@@ -46,14 +54,25 @@ export function keepFocusThroughZoom() {
   document.addEventListener('pointerdown', elsewhere, true);
   document.addEventListener('keydown', elsewhere, true);
   const watch = () => {
-    if (zoomFocus !== z) { stop(); return; }
+    if (zoomFocus !== z) {
+      stop();
+      return;
+    }
     const active = document.activeElement;
-    if (performance.now() > z.until || !z.el.isConnected || (active !== document.body && active !== z.el)) { stop(); return; }
-    if (active === z.el) {                          // keep the latest selection
-      z.start = z.el.selectionStart; z.end = z.el.selectionEnd; z.scroll = z.el.scrollTop;
+    if (performance.now() > z.until || !z.el.isConnected || (active !== document.body && active !== z.el)) {
+      stop();
+      return;
+    }
+    if (active === z.el) {
+      // keep the latest selection
+      z.start = z.el.selectionStart;
+      z.end = z.el.selectionEnd;
+      z.scroll = z.el.scrollTop;
     } else if (z.el.offsetParent && getComputedStyle(z.el).visibility !== 'hidden') {
       z.el.focus({ preventScroll: true });
-      try { z.el.setSelectionRange(z.start, z.end); } catch (_) {}
+      try {
+        z.el.setSelectionRange(z.start, z.end);
+      } catch (_) {}
       z.el.scrollTop = z.scroll;
     }
     requestAnimationFrame(watch);
@@ -67,25 +86,35 @@ const liveUpdates = new Set();
 let zoomFrame = 0;
 export const onZoom = () => {
   cancelAnimationFrame(zoomFrame);
-  zoomFrame = requestAnimationFrame(() => { for (const u of liveUpdates) u(); });
+  zoomFrame = requestAnimationFrame(() => {
+    for (const u of liveUpdates) u();
+  });
 };
-const fieldsByPage = {};                                        // pageNumber -> Promise<[{id, rect, multi, start}]>
+const fieldsByPage = {}; // pageNumber -> Promise<[{id, rect, multi, start}]>
 function pageFields(pageNumber) {
   if (!fieldsByPage[pageNumber]) {
-    fieldsByPage[pageNumber] = app().pdfDocument.getPage(pageNumber).then(p => p.getAnnotations()).then(list => list
-      .filter(x => x.fieldType === 'Tx' && !x.readOnly && !(x.fieldFlags & 8192) && !String(x.fieldName).startsWith('img_'))
-      .map(x => {
-        const b = boxOf(x.rect), multi = !!x.multiLine;
-        return { id: x.id, rect: x.rect, multi, b,
-          start: startSize(multi ? 4096 : 0, x.defaultAppearanceData?.fontSize || 0, b.h) };
-      }));
+    fieldsByPage[pageNumber] = app()
+      .pdfDocument.getPage(pageNumber)
+      .then((p) => p.getAnnotations())
+      .then((list) =>
+        list
+          .filter((x) => x.fieldType === 'Tx' && !x.readOnly && !(x.fieldFlags & 8192) && !String(x.fieldName).startsWith('img_'))
+          .map((x) => {
+            const b = boxOf(x.rect),
+              multi = !!x.multiLine;
+            return { id: x.id, rect: x.rect, multi, b, start: startSize(multi ? 4096 : 0, x.defaultAppearanceData?.fontSize || 0, b.h) };
+          }),
+      );
   }
   return fieldsByPage[pageNumber];
 }
 // What fits, for one box and its current text.
 // Measured at the box's own size: text is not shrunk while typing.
 function measure(f, font, text) {
-  const { w, h } = f.b, avail = w - 2 * PAD, size = f.start, avgS = font.avg(size);
+  const { w, h } = f.b,
+    avail = w - 2 * PAD,
+    size = f.start,
+    avgS = font.avg(size);
   if (!f.multi) {
     const used = font.widthOfTextAtSize(text.replaceAll('\n', ' '), size);
     return { left: Math.floor((avail - used) / avgS) };
@@ -102,17 +131,19 @@ function measure(f, font, text) {
 export function attachHints(pageNumber) {
   const pv = app().pdfViewer.getPageView(pageNumber - 1);
   if (!pv?.div) return;
-  Promise.all([pageFields(pageNumber), liveFont()]).then(([fields, font]) => {
-    for (const f of fields) {
-      const el = pv.div.querySelector(`.annotationLayer [data-element-id="${f.id}"]`);
-      if (el && !el.dataset.lbHint) hintBox(pv, f, font, el);
-    }
-  }).catch(err => console.warn('[typst-editor] live hints', err));
+  Promise.all([pageFields(pageNumber), liveFont()])
+    .then(([fields, font]) => {
+      for (const f of fields) {
+        const el = pv.div.querySelector(`.annotationLayer [data-element-id="${f.id}"]`);
+        if (el && !el.dataset.lbHint) hintBox(pv, f, font, el);
+      }
+    })
+    .catch((err) => console.warn('[typst-editor] live hints', err));
 }
 
 // Sizes and positions as calc(... * var(--total-scale-factor)), like pdf.js's
 // own, so they follow the zoom without being set again.
-const scaled = px => `calc(${px}px * var(--total-scale-factor))`;
+const scaled = (px) => `calc(${px}px * var(--total-scale-factor))`;
 const MIRRORED = ['font', 'letterSpacing', 'lineHeight', 'padding', 'textAlign', 'borderWidth', 'borderStyle', 'boxSizing'];
 
 // Live hints on one box, kept up to date as the student types, focuses and zooms.
@@ -126,12 +157,15 @@ function hintBox(pv, f, font, el) {
     return { left: scaled(Math.min(ax, bx) / v.scale), top: scaled((Math.max(ay, by) + 3) / v.scale) };
   };
   const update = () => {
-    if (!el.isConnected) { liveUpdates.delete(update); return; }
+    if (!el.isConnected) {
+      liveUpdates.delete(update);
+      return;
+    }
     const text = el.value.replace(/\r\n?/g, '\n');
-    el.style.fontSize = scaled(f.start);                        // always the box's own size; shrinking is an export choice
+    el.style.fontSize = scaled(f.start); // always the box's own size; shrinking is an export choice
     const m = measure(f, font, text);
     if (!f.multi) capLength(el, text, m);
-    markMoving(box, text, f.multi ? m.cut : undefined);         // yellow mark on the part that moves
+    markMoving(box, text, f.multi ? m.cut : undefined); // yellow mark on the part that moves
     // the hint, only while this box has focus, and one at a time
     const focused = document.activeElement === el;
     if (focused) removeOtherHints(box.hint);
@@ -141,7 +175,9 @@ function hintBox(pv, f, font, el) {
   el.addEventListener('input', update);
   el.addEventListener('focus', update);
   el.addEventListener('blur', update);
-  el.addEventListener('scroll', () => { if (box.mirror) box.mirror.scrollTop = el.scrollTop; });
+  el.addEventListener('scroll', () => {
+    if (box.mirror) box.mirror.scrollTop = el.scrollTop;
+  });
   update();
 }
 
@@ -160,8 +196,12 @@ function markMoving(box, text, cut) {
     box.mirror = null;
     return;
   }
-  if (!box.mirror) { box.mirror = $('div', { class: 'lb-mirror', 'aria-hidden': 'true' }); el.before(box.mirror); }
-  const mirror = box.mirror, cs = getComputedStyle(el);
+  if (!box.mirror) {
+    box.mirror = $('div', { class: 'lb-mirror', 'aria-hidden': 'true' });
+    el.before(box.mirror);
+  }
+  const mirror = box.mirror,
+    cs = getComputedStyle(el);
   for (const p of MIRRORED) mirror.style[p] = cs[p];
   mirror.style.borderColor = 'transparent';
   mirror.style.right = 'auto';
@@ -194,7 +234,10 @@ function showHint(box, msg, warn, place) {
     box.hint = null;
     return;
   }
-  if (!box.hint?.isConnected) { box.hint = $('div', { class: 'lb-hint', role: 'status' }); box.pv.div.append(box.hint); }
+  if (!box.hint?.isConnected) {
+    box.hint = $('div', { class: 'lb-hint', role: 'status' });
+    box.pv.div.append(box.hint);
+  }
   box.hint.className = 'lb-hint' + (warn ? ' lb-warn' : '');
   box.hint.textContent = msg;
   Object.assign(box.hint.style, place());

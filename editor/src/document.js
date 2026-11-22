@@ -2,20 +2,17 @@
 // Reading the open document (fields, image boxes, sections) and changing it:
 // every structural change saves the viewer's state, edits it with pdf-lib
 // and opens the result again on the same page.
-import {
-  PDFDocument, PDFName, PDFString, PDFHexString, PDFBool, PDFArray, PDFDict,
-  degrees, drawImage as opDrawImage, pushGraphicsState, popGraphicsState,
-} from 'pdf-lib';
-import { app, state, KEY, GENERAL } from './state.js';
-import { toast, ansi } from './util.js';
-import { contain } from './images.js';
-import { saveKeyOf } from './storage.js';
+import { degrees, drawImage as opDrawImage, PDFArray, PDFBool, PDFDict, PDFDocument, PDFHexString, PDFName, PDFString, popGraphicsState, pushGraphicsState } from 'pdf-lib';
 import { autosaveNow } from './autosave.js';
 import { config } from './config.js';
+import { contain } from './images.js';
+import { app, GENERAL, KEY, state } from './state.js';
+import { saveKeyOf } from './storage.js';
+import { ansi, toast } from './util.js';
 
 // The document as bytes, with what was typed and drawn. pdf.js asks for
 // getData() rather than saveDocument() when nothing changed since it loaded.
-export const documentBytes = doc => (doc.annotationStorage.size > 0 ? doc.saveDocument() : doc.getData());
+export const documentBytes = (doc) => (doc.annotationStorage.size > 0 ? doc.saveDocument() : doc.getData());
 
 // ----------------------------------------------------------- reading
 // Sections and their sub-parts (subsection() in the templates), in page order.
@@ -23,14 +20,16 @@ export const documentBytes = doc => (doc.annotationStorage.size > 0 ? doc.saveDo
 // on their own; `label` and `depth` are for the dropdown.
 async function readOutline(doc) {
   // Every entry is resolved at once; each comes before its sub-parts, in outline order.
-  const walk = async (list, parent, depth) => (await Promise.all(list.map(async it => {
-    const title = parent ? `${parent} › ${it.title}` : it.title;
-    const [{ page, top }, children] = await Promise.all([
-      placeOf(doc, it.dest),
-      it.items?.length ? walk(it.items, title, depth + 1) : [],
-    ]);
-    return [{ title, label: it.title, depth, page, top }, ...children];
-  }))).flat();
+  const walk = async (list, parent, depth) =>
+    (
+      await Promise.all(
+        list.map(async (it) => {
+          const title = parent ? `${parent} › ${it.title}` : it.title;
+          const [{ page, top }, children] = await Promise.all([placeOf(doc, it.dest), it.items?.length ? walk(it.items, title, depth + 1) : []]);
+          return [{ title, label: it.title, depth, page, top }, ...children];
+        }),
+      )
+    ).flat();
   return walk((await doc.getOutline()) || [], null, 0);
 }
 
@@ -43,7 +42,7 @@ async function placeOf(doc, dest) {
     const top = target[1]?.name === 'XYZ' && typeof target[3] === 'number' ? target[3] : null;
     return { page, top };
   } catch {
-    return { page: -1, top: null };   // a destination pdf.js cannot resolve: listed without a page
+    return { page: -1, top: null }; // a destination pdf.js cannot resolve: listed without a page
   }
 }
 
@@ -77,29 +76,35 @@ const templateIndexOf = (ordinal) => {
   return -1;
 };
 // A template box is found by its template page; a box on an added page by that page's id.
-export const slotPageIndex = slot => slot.pageId
-  ? state.pageInfo.findIndex(p => p.id === slot.pageId) : templateIndexOf(slot.ordinal);
+export const slotPageIndex = (slot) => (slot.pageId ? state.pageInfo.findIndex((p) => p.id === slot.pageId) : templateIndexOf(slot.ordinal));
 
 export async function analyse() {
-  const a = app(), doc = a.pdfDocument;
+  const a = app(),
+    doc = a.pdfDocument;
   const bytes = await doc.getData();
   const pl = await PDFDocument.load(bytes, { updateMetadata: false });
   const info = pl.getInfoDict();
-  const infoStr = k => {
+  const infoStr = (k) => {
     const v = info.lookup(PDFName.of(k));
     return v?.decodeText ? v.decodeText() : null;
   };
-  state.pageInfo = pl.getPages().map(p => {
+  state.pageInfo = pl.getPages().map((p) => {
     const added = p.node.lookup(PDFName.of(KEY.added)) === PDFBool.True;
     const kind = p.node.lookup(PDFName.of(KEY.kind));
     const ex = p.node.lookup(PDFName.of(KEY.exercise));
     const pid = p.node.lookup(PDFName.of(KEY.pageId));
-    const text = v => v?.decodeText ? v.decodeText() : null;
+    const text = (v) => (v?.decodeText ? v.decodeText() : null);
     return { added, kind: text(kind), exercise: text(ex), id: text(pid) };
   });
   state.id = infoStr(KEY.id) || (a.filename || 'document.pdf').replace(/\.pdf$/i, '').replace(/[_ ]edited$/i, '');
   state.saveKey = saveKeyOf(state.id);
-  const parse = (s, fallback) => { try { return s ? JSON.parse(s) : fallback; } catch (_) { return fallback; } };
+  const parse = (s, fallback) => {
+    try {
+      return s ? JSON.parse(s) : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  };
   state.images = parse(infoStr(KEY.images), {});
   state.exercises = await readOutline(doc);
 
@@ -110,17 +115,16 @@ export async function analyse() {
     // First open of a template: slots come from the img_* form fields.
     state.slots = [];
     // getFieldObjects() comes back empty in pdf.js 6 here, so read widgets per page.
-    const perPage = await Promise.all(Array.from({ length: doc.numPages },
-      async (_, p) => (await doc.getPage(p + 1)).getAnnotations({ intent: 'display' })));
+    const perPage = await Promise.all(Array.from({ length: doc.numPages }, async (_, p) => (await doc.getPage(p + 1)).getAnnotations({ intent: 'display' })));
     perPage.forEach((annots, p) => {
-      const ordinal = state.pageInfo.slice(0, p + 1).filter(entry => !entry.added).length - 1;
+      const ordinal = state.pageInfo.slice(0, p + 1).filter((entry) => !entry.added).length - 1;
       for (const o of annots) {
         if (o.fieldName?.startsWith('img_') && o.rect) state.slots.push({ name: o.fieldName.slice(4), ordinal, rect: o.rect });
       }
     });
   }
   for (const s of state.slots) {
-    if (s.pageId) continue;               // a box on an added page keeps the exercise it was made for
+    if (s.pageId) continue; // a box on an added page keeps the exercise it was made for
     s.exercise = s.exercise || exerciseAt(templateIndexOf(s.ordinal), Math.max(s.rect[1], s.rect[3]));
   }
 }
@@ -133,17 +137,18 @@ export async function unparked(doc) {
   // pdf.js does not pass custom Info keys on; the export's Producer and Keywords are standard ones.
   if (!`${info?.Producer || ''} ${info?.Keywords || ''}`.includes(config.keywords)) return null;
   const pl = await PDFDocument.load(await doc.getData(), { updateMetadata: false });
-  const N = n => PDFName.of(n);
+  const N = (n) => PDFName.of(n);
   const park = pl.catalog.lookup(N(config.parkKey));
   if (!(park instanceof PDFDict)) return null;
   const own = park.lookup(N('PageCount'))?.asNumber?.() ?? pl.getPageCount();
-  while (pl.getPageCount() > own) pl.removePage(pl.getPageCount() - 1);   // pages the overflow moved text to
+  while (pl.getPageCount() > own) pl.removePage(pl.getPageCount() - 1); // pages the overflow moved text to
   for (const page of pl.getPages()) {
     const p = page.node.lookup(N(config.parkKey));
     if (!(p instanceof PDFDict)) continue;
     for (const k of ['Contents', 'Annots']) {
       const v = p.get(N(k));
-      if (v) page.node.set(N(k), v); else page.node.delete(N(k));
+      if (v) page.node.set(N(k), v);
+      else page.node.delete(N(k));
     }
     page.node.delete(N(config.parkKey));
   }
@@ -160,8 +165,10 @@ export async function reopen(bytes) {
   state.reopening = true;
   let timer;
   // Wait for the pages and for onDocumentLoaded to have read slots and tags.
-  const pages = new Promise(r => a.eventBus.on('pagesloaded', r, { once: true }));
-  const analysed = new Promise(r => { state.onAnalysed = r; });
+  const pages = new Promise((r) => a.eventBus.on('pagesloaded', r, { once: true }));
+  const analysed = new Promise((r) => {
+    state.onAnalysed = r;
+  });
   const timeout = new Promise((_, rej) => {
     timer = setTimeout(() => rej(new Error(`the ${config.noun} took too long to reopen`)), 60000);
   });
@@ -176,10 +183,14 @@ export async function reopen(bytes) {
 }
 
 // Resolves once no transform is running, checking every 50 ms.
-const whenIdle = () => new Promise(resolve => {
-  const check = () => { if (state.busy) setTimeout(check, 50); else resolve(); };
-  check();
-});
+const whenIdle = () =>
+  new Promise((resolve) => {
+    const check = () => {
+      if (state.busy) setTimeout(check, 50);
+      else resolve();
+    };
+    check();
+  });
 
 // Save the live viewer state, let `fn` change it with pdf-lib, reopen.
 export async function transform(fn, targetPage) {
@@ -194,14 +205,13 @@ export async function transform(fn, targetPage) {
     const result = await fn(pl);
     pl.setKeywords([config.keywords]);
     pl.getInfoDict().set(PDFName.of(KEY.id), PDFHexString.fromText(state.id));
-    pl.getInfoDict().set(PDFName.of(KEY.slots), PDFHexString.fromText(JSON.stringify(
-      state.slots.map(({ name, ordinal, pageId, rect, exercise }) => ({ name, ordinal, pageId, rect, exercise })))));
+    pl.getInfoDict().set(PDFName.of(KEY.slots), PDFHexString.fromText(JSON.stringify(state.slots.map(({ name, ordinal, pageId, rect, exercise }) => ({ name, ordinal, pageId, rect, exercise })))));
     pl.getInfoDict().set(PDFName.of(KEY.images), PDFHexString.fromText(JSON.stringify(state.images)));
     // pdf.js already wrote the field appearances (with fonts that cover Ω, µ, ...);
     // pdf-lib regenerating them with WinAnsi Helvetica would fail on those characters.
     const bytes = await pl.save({ updateFieldAppearances: false });
     state.opCount++;
-    await reopen(bytes);  // busy stays set until the new document is up
+    await reopen(bytes); // busy stays set until the new document is up
     if (targetPage) app().pdfViewer.currentPageNumber = targetPage;
     await autosaveNow(true);
     return result;
@@ -215,7 +225,7 @@ export async function transform(fn, targetPage) {
   }
 }
 
-const slotNM = name => config.slotPrefix + name;
+const slotNM = (name) => config.slotPrefix + name;
 
 function removeAnnotsByNM(page, nm) {
   const annots = page.node.lookup(PDFName.of('Annots'));
@@ -234,35 +244,52 @@ function removeAnnotsByNM(page, nm) {
 // Remove can take it out again cleanly.
 export async function placeInSlot(slot, rec) {
   const pageIndex = slotPageIndex(slot);
-  await transform(async pl => {
+  await transform(async (pl) => {
     const page = pl.getPage(pageIndex);
     removeAnnotsByNM(page, slotNM(slot.name));
-    try { const f = pl.getForm().getField('img_' + slot.name); pl.getForm().removeField(f); } catch (_) { /* no such field: nothing to remove */ }
-    if (!rec) { delete state.images['slot:' + slot.name]; return; }
+    try {
+      const f = pl.getForm().getField('img_' + slot.name);
+      pl.getForm().removeField(f);
+    } catch (_) {
+      /* no such field: nothing to remove */
+    }
+    if (!rec) {
+      delete state.images['slot:' + slot.name];
+      return;
+    }
     await stampImage(pl, page, slot, rec, pageIndex);
   }, pageIndex + 1);
 }
 
 // Put an image into a box as a Stamp annotation, centred and scaled to fit.
 export async function stampImage(pl, page, slot, rec, pageIndex) {
-    const [x1, y1, x2, y2] = slot.rect;
-    const inset = 2;
-    const fit = contain(rec.w, rec.h, (x2 - x1) - 2 * inset, (y2 - y1) - 2 * inset);
-    const x = x1 + ((x2 - x1) - fit.w) / 2, y = y1 + ((y2 - y1) - fit.h) / 2;
-    const img = await pl.embedJpg(rec.bytes);
-    const ctx = pl.context;
-    const ops = [pushGraphicsState(), ...opDrawImage('Im0', { x: 0, y: 0, width: fit.w, height: fit.h, rotate: degrees(0), xSkew: degrees(0), ySkew: degrees(0) }), popGraphicsState()];
-    const ap = ctx.register(ctx.formXObject(ops, {
-      BBox: [0, 0, fit.w, fit.h], Resources: { XObject: { Im0: img.ref } },
-    }));
-    const annot = ctx.register(ctx.obj({
-      Type: 'Annot', Subtype: 'Stamp', Rect: [x, y, x + fit.w, y + fit.h], F: 4 | 128,
+  const [x1, y1, x2, y2] = slot.rect;
+  const inset = 2;
+  const fit = contain(rec.w, rec.h, x2 - x1 - 2 * inset, y2 - y1 - 2 * inset);
+  const x = x1 + (x2 - x1 - fit.w) / 2,
+    y = y1 + (y2 - y1 - fit.h) / 2;
+  const img = await pl.embedJpg(rec.bytes);
+  const ctx = pl.context;
+  const ops = [pushGraphicsState(), ...opDrawImage('Im0', { x: 0, y: 0, width: fit.w, height: fit.h, rotate: degrees(0), xSkew: degrees(0), ySkew: degrees(0) }), popGraphicsState()];
+  const ap = ctx.register(
+    ctx.formXObject(ops, {
+      BBox: [0, 0, fit.w, fit.h],
+      Resources: { XObject: { Im0: img.ref } },
+    }),
+  );
+  const annot = ctx.register(
+    ctx.obj({
+      Type: 'Annot',
+      Subtype: 'Stamp',
+      Rect: [x, y, x + fit.w, y + fit.h],
+      F: 4 | 128,
       NM: PDFString.of(slotNM(slot.name)),
       Contents: PDFHexString.fromText(ansi('Image for: ' + slot.exercise)),
       AP: { N: ap },
-    }));
-    page.node.addAnnot(annot);
-    state.images['slot:' + slot.name] = { ...rec.meta, kind: 'slot', slot: slot.name, exercise: slot.exercise, page: pageIndex + 1 };
+    }),
+  );
+  page.node.addAnnot(annot);
+  state.images['slot:' + slot.name] = { ...rec.meta, kind: 'slot', slot: slot.name, exercise: slot.exercise, page: pageIndex + 1 };
 }
 
 export function markAdded(page, kind, exercise, pageId) {

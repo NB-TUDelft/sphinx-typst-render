@@ -35,14 +35,11 @@ const node = (args, cwd) => run(process.execPath, args, { cwd });
 // path, which never matches, and drops every range, so all of src/ would
 // read as covered.
 async function keepOwnFiles(lcov) {
-  const records = (await readFile(lcov, 'utf8')).split('end_of_record\n')
-    .filter(record => /^SF:editor\/src\//m.test(record));
-  await writeFile(lcov, records.map(record => `${record}end_of_record\n`).join(''));
-  const total = key => records.reduce(
-    (sum, record) => sum + Number(record.match(new RegExp(String.raw`^${key}:(\d+)$`, 'm'))?.[1] ?? 0), 0);
+  const records = (await readFile(lcov, 'utf8')).split('end_of_record\n').filter((record) => /^SF:editor\/src\//m.test(record));
+  await writeFile(lcov, records.map((record) => `${record}end_of_record\n`).join(''));
+  const total = (key) => records.reduce((sum, record) => sum + Number(record.match(new RegExp(String.raw`^${key}:(\d+)$`, 'm'))?.[1] ?? 0), 0);
   const share = (hit, found) => (total(found) ? `${((100 * total(hit)) / total(found)).toFixed(1)}%` : 'n/a');
-  console.log(`editor/src coverage: lines ${share('LH', 'LF')}, branches ${share('BRH', 'BRF')}, `
-    + `functions ${share('FNH', 'FNF')}, in ${records.length} files`);
+  console.log(`editor/src coverage: lines ${share('LH', 'LF')}, branches ${share('BRH', 'BRF')}, ` + `functions ${share('FNH', 'FNF')}, in ${records.length} files`);
 }
 
 await rm(reports, { recursive: true, force: true });
@@ -56,8 +53,7 @@ try {
   // the repository root, so lcov.info names files the way SonarQube, which
   // scans from there, looks them up: editor/src/....
   const c8 = path.join(here, 'node_modules', 'c8', 'bin', 'c8.js');
-  const reported = node([c8, 'report', '--temp-directory', raw, '--reports-dir', reports,
-    '--reporter', 'lcovonly', '--include', 'src/sphinx_typst_render/_editor/**'], root);
+  const reported = node([c8, 'report', '--temp-directory', raw, '--reports-dir', reports, '--reporter', 'lcovonly', '--include', 'src/sphinx_typst_render/_editor/**'], root);
   if (reported === 0) await keepOwnFiles(path.join(reports, 'lcov.info'));
   process.exitCode = tested || reported;
 } finally {

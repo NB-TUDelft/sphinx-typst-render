@@ -11,23 +11,34 @@ export const $ = (tag, attrs = {}, ...kids) => {
   for (const kid of kids) if (kid != null && kid !== false) el.append(kid);
   return el;
 };
-export const ansi = s => String(s).replace(/[‒-―]/g, '-').replace(/[^\x20-\x7e\xa0-\xff\n]/g, '?');
+export const ansi = (s) =>
+  String(s)
+    .replace(/[‒-―]/g, '-')
+    .replace(/[^\x20-\x7e\xa0-\xff\n]/g, '?');
 export const nowIso = () => new Date().toISOString();
 // Runs `fn` on each item in turn, each after the last has finished: for work
 // that must not overlap, because it would race or hold too much at once.
 export const inSequence = (items, fn) => items.reduce((done, item) => done.then(() => fn(item)), Promise.resolve());
 export const toast = (msg, ms = 3500) => {
-  document.querySelectorAll('.lb-toast').forEach(old => { old.remove(); });   // one message at a time
+  document.querySelectorAll('.lb-toast').forEach((old) => {
+    old.remove();
+  }); // one message at a time
   const t = $('div', { class: 'lb-toast', role: 'status' }, msg);
   document.body.append(t);
   setTimeout(() => t.remove(), ms);
 };
 
 export function pickFile(accept = 'image/*', multiple = false) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     const input = $('input', { type: 'file', accept, class: 'lb-hidden-input', ...(multiple ? { multiple: '' } : {}) });
-    input.addEventListener('change', () => { resolve(multiple ? [...input.files] : input.files[0] || null); input.remove(); });
-    input.addEventListener('cancel', () => { resolve(null); input.remove(); });
+    input.addEventListener('change', () => {
+      resolve(multiple ? [...input.files] : input.files[0] || null);
+      input.remove();
+    });
+    input.addEventListener('cancel', () => {
+      resolve(null);
+      input.remove();
+    });
     document.body.append(input);
     input.click();
   });
