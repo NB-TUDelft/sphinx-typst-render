@@ -44,6 +44,8 @@ TODAY = datetime.now().strftime("%Y-%m-%d")
 OUT_DIR = REPO / "editor-test" / TODAY
 PARK_KEY = "/FORMEditable"  # default label_prefix, see editor/src/config.js
 PAGE_COUNT_JS = "window.typstRenderEditor.state().pageInfo.length"
+LOGBOOK_FIELDS = "/LogbookFields"  # what the export records, in its Info dict
+CONFIRM_OK, TEXT_PAGE_OK = "#lbConfirmOk", "#lbTextPageOk"
 STORE = "typst-render-editor"  # the default storage name
 OLD_SAVE, NEW_SAVE = "2026-01-01T00:00:00.000Z", "2026-02-01T00:00:00.000Z"
 
@@ -298,7 +300,7 @@ def run_suite():
                 (OUT_DIR / "reopen_export.pdf").write_bytes(exp)
                 r = PdfReader(io.BytesIO(exp))
                 root = r.trailer["/Root"]
-                lf = json.loads(r.metadata["/LogbookFields"])
+                lf = json.loads(r.metadata[LOGBOOK_FIELDS])
                 record("03_export_is_flat", "/AcroForm" not in root, "export has no form")
                 record(
                     "04_no_live_annotations",
@@ -348,7 +350,7 @@ def run_suite():
 
                 # A second export of the reopened file matches the first.
                 r2 = PdfReader(io.BytesIO(base64.b64decode(pg.evaluate(EXPORT_JS, "overflow")["b64"])))
-                lf2 = json.loads(r2.metadata["/LogbookFields"])
+                lf2 = json.loads(r2.metadata[LOGBOOK_FIELDS])
                 for k in ("fields", "checks", "images", "overflow"):
                     record(f"13_second_export_same_{k}", lf2[k] == lf[k], f"LogbookFields.{k} unchanged")
                 record(
@@ -476,10 +478,10 @@ def check_saves_and_print(pg, cov, record):
     before = pg.evaluate(IDB_JS, [STORE, "dump", []])
     pg.click("#lbPrivacy")
     pg.click("#lbClearThis")
-    pg.click("#lbConfirmOk")
+    pg.click(CONFIRM_OK)
     pg.wait_for_timeout(300)  # the second confirmation replaces the first
     with pg.expect_navigation(timeout=15000):  # the editor reloads once it is done
-        pg.click("#lbConfirmOk")
+        pg.click(CONFIRM_OK)
         # The toast of an earlier step may still be up; wait for this one.
         toast = pg.locator(".lb-toast", has_text="deleted").inner_text(timeout=10000)
         cov.save()
@@ -503,7 +505,7 @@ def check_editing_flows(pg, cov, record):
     # A text page goes at the end and is shown; a page the student added can be deleted.
     pages = pg.evaluate(PAGE_COUNT_JS)
     pg.click("#lbInsertBlank")
-    pg.click("#lbTextPageOk")
+    pg.click(TEXT_PAGE_OK)
     pg.wait_for_function(IDLE_PAGES_JS, arg=pages + 1, timeout=30000)
     added = pg.evaluate("window.typstRenderEditor.state().pageInfo.at(-1)")
     shown = pg.input_value("#lbPageNumber")
@@ -513,7 +515,7 @@ def check_editing_flows(pg, cov, record):
         f"kind={added['kind']}, page {shown}",
     )
     pg.click("#lbDeletePage")
-    pg.click("#lbConfirmOk")
+    pg.click(CONFIRM_OK)
     pg.wait_for_function(IDLE_PAGES_JS, arg=pages, timeout=30000)
     record("23_added_page_deleted", pg.evaluate(PAGE_COUNT_JS) == pages, f"{pages} page(s) again")
 
@@ -536,7 +538,7 @@ def check_editing_flows(pg, cov, record):
         pg.click("#lbOverflowOk")
     exported = OUT_DIR / "toolbar_export.pdf"
     download.value.save_as(exported)
-    overflow = json.loads(PdfReader(exported).metadata["/LogbookFields"])["overflow"]
+    overflow = json.loads(PdfReader(exported).metadata[LOGBOOK_FIELDS])["overflow"]
     record(
         "25_toolbar_export_asks_then_downloads",
         overflow.get("preparation", {}).get("choice") == "all",
@@ -545,7 +547,7 @@ def check_editing_flows(pg, cov, record):
 
     # A dialog keeps Tab inside itself, both ways, and Escape cancels it.
     pg.click("#lbInsertBlank")
-    pg.wait_for_selector("#lbTextPageOk")
+    pg.wait_for_selector(TEXT_PAGE_OK)
     inside = []
     for key in ["Tab"] * 5 + ["Shift+Tab"] * 5:
         pg.keyboard.press(key)
@@ -553,7 +555,7 @@ def check_editing_flows(pg, cov, record):
     pg.keyboard.press("Escape")
     record(
         "26_dialog_keeps_focus_and_escape_cancels",
-        all(inside) and pg.locator("#lbTextPageOk").count() == 0 and pg.evaluate(PAGE_COUNT_JS) == pages,
+        all(inside) and pg.locator(TEXT_PAGE_OK).count() == 0 and pg.evaluate(PAGE_COUNT_JS) == pages,
         f"focus inside the dialog after each key: {all(inside)}",
     )
 
@@ -598,7 +600,7 @@ def check_editing_flows(pg, cov, record):
     pg.reload()
     wait_editor(pg)
     pg.click("#lbRestoreNo")
-    pg.click("#lbConfirmOk")
+    pg.click(CONFIRM_OK)
     pg.wait_for_selector(".lb-restore", state="detached", timeout=10000)
     saves = pg.evaluate(IDB_JS, [STORE, "dump", []])
     record("30_restore_or_start_fresh", "sheet" not in saves, f"saves after starting fresh: {sorted(saves)}")
