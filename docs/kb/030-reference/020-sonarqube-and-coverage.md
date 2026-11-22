@@ -4,7 +4,8 @@ summary: >-
   `sonar-scanner` with host and token from the scanner's own configuration,
   never an empty `SONAR_TOKEN`, never either recorded here; Python coverage
   from `pytest --cov`, the editor's from its browser test through V8 and c8
-  (`pnpm run coverage`), and why c8's `--exclude-after-remap` is not used; what
+  (`pnpm run coverage`), each snapshot reported alone and added up, since c8
+  adds them up wrongly, and why its `--exclude-after-remap` is not used; what
   coverage leaves out; `sonar.projectVersion` advances with releases.
 ---
 
@@ -79,9 +80,18 @@ browser, and `editor/coverage.mjs` (`pnpm run coverage`) turns that run into
    Served URLs under `_static/typst-editor/` are rewritten to the package's
    `_editor/` files they were copied from verbatim; the per-site `config.js`
    has no counterpart and is skipped.
-3. c8 maps the coverage through the source maps, run from the repository root
-   so `lcov.info` names files as `editor/src/...`, the paths the scanner
-   looks up.
+3. c8 maps each snapshot through the source maps on its own, run from the
+   repository root so `lcov.info` names files as `editor/src/...`, the paths
+   the scanner looks up; `coverage.mjs` adds the reports up.
+
+The snapshots are not handed to c8 together, because c8 adds them up wrongly:
+code after an `await` that ran in one of them can read as never run in the
+sum, while that snapshot alone counts it (c8 12.0.0; the restore bar in
+`autosave.js` read 0 though its button's handler ran). Added up by
+`coverage.mjs`, lines are summed; branch and function numbers differ between
+snapshots, so per line the best snapshot counts, which can undercount
+branches but never overcounts them. The change took the measured line
+coverage from 85.7% to 94.4% with the same test (`2026-11-22`).
 
 c8's own `--include editor/src/** --exclude-after-remap` is not used, because
 it reports every file as fully covered with no functions or branches (c8
@@ -90,8 +100,9 @@ v8-to-istanbul tests each range against the map's relative source path
 (`../../../editor/src/main.js`), which never matches the glob, so it drops
 every range, yet it resolves the paths before listing the files. So c8 remaps
 everything, pdf.js and pdf-lib included, and `coverage.mjs` keeps only the
-`editor/src/` records. The first run (`2026-11-22`) measured 74.4% of lines,
-63.0% of branches and 74.1% of functions over the 18 modules.
+`editor/src/` records. With checks 1 to 30 of the browser test, the editor
+measures 94.4% of lines, 65.8% of branches and 92.5% of functions
+(`2026-11-22`).
 
 ## Left out of coverage
 
