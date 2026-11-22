@@ -37,7 +37,7 @@ __all__ = [
     "setup",
     "stage_field_library",
 ]
-__version__ = "1.1.2"
+__version__ = "1.1.3"
 
 STATIC_DIR = Path(__file__).parent / "static"
 
