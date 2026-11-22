@@ -10,6 +10,7 @@ import { AnnotationEditorType, AnnotationMode, GlobalWorkerOptions, getDocument 
 // pdf_viewer.mjs reads the library from globalThis.pdfjsLib, which importing
 // pdfjs-dist sets, so it must be imported second.
 import { DownloadManager, EventBus, PDFLinkService, PDFViewer, ProgressBar } from 'pdfjs-dist/web/pdf_viewer.mjs';
+import { inSequence } from './util.js';
 
 // The runtime files sit beside this bundle (see build.mjs).
 const HERE = new URL('.', import.meta.url);
@@ -167,7 +168,7 @@ class Viewer {
       const first = (await doc.getPage(1)).getViewport({ scale: 1 });
       pageSize.textContent = `@page { size: ${first.width}pt ${first.height}pt; margin: 0; }`;
       document.head.append(pageSize);
-      for (let n = 1; n <= doc.numPages; n++) {
+      const printPage = async n => {
         const page = await doc.getPage(n);
         const viewport = page.getViewport({ scale: 1 });
         const canvas = document.createElement('canvas');
@@ -192,7 +193,9 @@ class Viewer {
         sheet.append(img);
         container.append(sheet);
         await img.decode();
-      }
+      };
+      // One page at a time, in order: each holds a full-size canvas while it renders.
+      await inSequence(Array.from({ length: doc.numPages }, (_, i) => i + 1), printPage);
     } catch (error) {
       cleanup();
       throw error;

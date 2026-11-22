@@ -13,6 +13,9 @@ export const $ = (tag, attrs = {}, ...kids) => {
 };
 export const ansi = s => String(s).replace(/[‒-―]/g, '-').replace(/[^\x20-\x7e\xa0-\xff\n]/g, '?');
 export const nowIso = () => new Date().toISOString();
+// Runs `fn` on each item in turn, each after the last has finished: for work
+// that must not overlap, because it would race or hold too much at once.
+export const inSequence = (items, fn) => items.reduce((done, item) => done.then(() => fn(item)), Promise.resolve());
 export const toast = (msg, ms = 3500) => {
   document.querySelectorAll('.lb-toast').forEach(old => { old.remove(); });   // one message at a time
   const t = $('div', { class: 'lb-toast', role: 'status' }, msg);

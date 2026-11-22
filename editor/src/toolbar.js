@@ -185,11 +185,10 @@ async function clearSaved(all) {
   if (all) ok = await idb.wipeAll();
   else {
     // This document's save, its older saves, and any save not yet moved to its key.
-    for (const k of await idb.keys()) {
-      if (typeof k !== 'string') continue;
-      if (k === state.saveKey || k.startsWith(`${PREV}${state.saveKey}:`) || (!k.startsWith(PREV) && saveKeyOf(k) === state.saveKey))
-        ok = (await idb.wipe(k)) && ok;
-    }
+    const mine = k => typeof k === 'string'
+      && (k === state.saveKey || k.startsWith(`${PREV}${state.saveKey}:`) || (!k.startsWith(PREV) && saveKeyOf(k) === state.saveKey));
+    const wiped = await Promise.all((await idb.keys()).filter(mine).map(k => idb.wipe(k)));
+    ok = wiped.every(Boolean);
   }
   toast(ok ? `Saved work for ${what} deleted. Reloading…` : 'Some saved work could not be removed.', 4000);
   if (ok) setTimeout(() => location.reload(), 1200);

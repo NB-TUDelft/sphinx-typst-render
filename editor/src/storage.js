@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Autosave storage in the browser (IndexedDB), save keys, and moving old saves.
 import { config } from './config.js';
+import { inSequence } from './util.js';
 
 export const idb = (() => {
   let dbp;
@@ -37,11 +38,11 @@ export const idb = (() => {
       let keys = [];
       try { keys = await tx('readonly', s => s.getAllKeys()); } catch (_) {}
       try { await tx('readwrite', s => s.clear()); } catch (_) {
-        for (const k of keys) await this.wipe(k);
+        await Promise.all(keys.map(k => this.wipe(k)));
       }
       let left = [];
       try { left = await tx('readonly', s => s.getAllKeys()); } catch (_) {}
-      for (const k of left) await this.wipe(k);
+      await Promise.all(left.map(k => this.wipe(k)));
       return true;
     },
   };
@@ -65,43 +66,43 @@ export const hasBytes = r => !!r?.bytes?.length;
 
 // Move every save to its logbook number. Nothing is deleted until the copy is
 // read back. When two saves meet, the newest becomes the save and the other is
-// kept as an older save the student can switch to.
+// kept as an older save the student can switch to. One save at a time: two
+// saves for the same logbook must not both read its save before either writes.
 let migration;
 export const migrateSaves = () => migration ||= (async () => {
-  for (const k of await idb.keys()) {
-    if (typeof k !== 'string' || k.startsWith(PREV)) continue;
-    const target = saveKeyOf(k);
-    if (target === k) continue;
-    const rec = await idb.get(k);
-    if (!hasBytes(rec)) continue;
-    const cur = await idb.get(target);
-    let checks;
-    if (!hasBytes(cur)) {
-      await idb.put(target, rec);
-      checks = [[target, rec]];
-    } else {
-      const recNewer = String(rec.time) > String(cur.time);
-      const older = recNewer ? cur : rec, prevKey = `${PREV}${target}:${older.time}`;
-      await idb.put(prevKey, older);
-      checks = [[prevKey, older]];
-      if (recNewer) { await idb.put(target, rec); checks.push([target, rec]); }
-    }
-    let ok = true;
-    for (const [ck, want] of checks) {
-      const got = await idb.get(ck);
-      if (!hasBytes(got) || got.bytes.length !== want.bytes.length || got.time !== want.time) ok = false;
-    }
-    if (ok) await idb.del(k);
-    else console.warn('[typst-editor] could not move save', k, '→', target);
-  }
+  await inSequence(await idb.keys(), moveSave);
 })().catch(err => console.warn('[typst-editor] save migration', err));
 
-export async function olderSaves(key) {
-  const out = [];
-  for (const k of await idb.keys()) {
-    if (typeof k !== 'string' || !k.startsWith(`${PREV}${key}:`)) continue;
-    const r = await idb.get(k);
-    if (hasBytes(r)) out.push({ key: k, rec: r });
+async function moveSave(k) {
+  if (typeof k !== 'string' || k.startsWith(PREV)) return;
+  const target = saveKeyOf(k);
+  if (target === k) return;
+  const rec = await idb.get(k);
+  if (!hasBytes(rec)) return;
+  const cur = await idb.get(target);
+  let checks;
+  if (hasBytes(cur)) {
+    const recNewer = String(rec.time) > String(cur.time);
+    const older = recNewer ? cur : rec, prevKey = `${PREV}${target}:${older.time}`;
+    await idb.put(prevKey, older);
+    checks = [[prevKey, older]];
+    if (recNewer) {
+      await idb.put(target, rec);
+      checks.push([target, rec]);
+    }
+  } else {
+    await idb.put(target, rec);
+    checks = [[target, rec]];
   }
-  return out.sort((x, y) => String(y.rec.time).localeCompare(String(x.rec.time)));
+  const copies = await Promise.all(checks.map(([ck]) => idb.get(ck)));
+  const same = (got, want) => hasBytes(got) && got.bytes.length === want.bytes.length && got.time === want.time;
+  if (checks.every(([, want], i) => same(copies[i], want))) await idb.del(k);
+  else console.warn('[typst-editor] could not move save', k, '→', target);
+}
+
+export async function olderSaves(key) {
+  const keys = (await idb.keys()).filter(k => typeof k === 'string' && k.startsWith(`${PREV}${key}:`));
+  const recs = await Promise.all(keys.map(k => idb.get(k)));
+  return keys.map((k, i) => ({ key: k, rec: recs[i] })).filter(o => hasBytes(o.rec))
+    .sort((x, y) => String(y.rec.time).localeCompare(String(x.rec.time)));
 }

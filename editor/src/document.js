@@ -22,28 +22,29 @@ export const documentBytes = doc => (doc.annotationStorage.size > 0 ? doc.saveDo
 // A sub-part's title is "SECTION (Tasks ...) › Sub-part", so tags stay readable
 // on their own; `label` and `depth` are for the dropdown.
 async function readOutline(doc) {
-  const out = [];
-  const items = (await doc.getOutline()) || [];
-  const walk = async (list, parent = null, depth = 0) => {
-    for (const it of list) {
-      let page = -1, top = null;
-      try {
-        let dest = it.dest;
-        if (typeof dest === 'string') dest = await doc.getDestination(dest);
-        if (Array.isArray(dest) && dest[0]) {
-          page = typeof dest[0] === 'number' ? dest[0] : await doc.getPageIndex(dest[0]);
-          if (dest[1]?.name === 'XYZ' && typeof dest[3] === 'number') top = dest[3];
-        }
-      } catch (_) {
-        // a destination pdf.js cannot resolve: the entry is listed without a page
-      }
-      const title = parent ? `${parent} › ${it.title}` : it.title;
-      out.push({ title, label: it.title, depth, page, top });
-      if (it.items?.length) await walk(it.items, title, depth + 1);
-    }
-  };
-  await walk(items);
-  return out;
+  // Every entry is resolved at once; each comes before its sub-parts, in outline order.
+  const walk = async (list, parent, depth) => (await Promise.all(list.map(async it => {
+    const title = parent ? `${parent} › ${it.title}` : it.title;
+    const [{ page, top }, children] = await Promise.all([
+      placeOf(doc, it.dest),
+      it.items?.length ? walk(it.items, title, depth + 1) : [],
+    ]);
+    return [{ title, label: it.title, depth, page, top }, ...children];
+  }))).flat();
+  return walk((await doc.getOutline()) || [], null, 0);
+}
+
+// Where an outline entry points: its page index and the height on that page.
+async function placeOf(doc, dest) {
+  try {
+    const target = typeof dest === 'string' ? await doc.getDestination(dest) : dest;
+    if (!Array.isArray(target) || !target[0]) return { page: -1, top: null };
+    const page = typeof target[0] === 'number' ? target[0] : await doc.getPageIndex(target[0]);
+    const top = target[1]?.name === 'XYZ' && typeof target[3] === 'number' ? target[3] : null;
+    return { page, top };
+  } catch {
+    return { page: -1, top: null };   // a destination pdf.js cannot resolve: listed without a page
+  }
 }
 
 // Exercise for a page: the last section that starts on or before it.
@@ -109,15 +110,14 @@ export async function analyse() {
     // First open of a template: slots come from the img_* form fields.
     state.slots = [];
     // getFieldObjects() comes back empty in pdf.js 6 here, so read widgets per page.
-    for (let p = 0; p < doc.numPages; p++) {
-      const annots = await (await doc.getPage(p + 1)).getAnnotations({ intent: 'display' });
+    const perPage = await Promise.all(Array.from({ length: doc.numPages },
+      async (_, p) => (await doc.getPage(p + 1)).getAnnotations({ intent: 'display' })));
+    perPage.forEach((annots, p) => {
+      const ordinal = state.pageInfo.slice(0, p + 1).filter(info => !info.added).length - 1;
       for (const o of annots) {
-        if (!o.fieldName?.startsWith('img_') || !o.rect) continue;
-        let ordinal = -1;
-        for (let i = 0; i <= p; i++) if (!state.pageInfo[i].added) ordinal++;
-        state.slots.push({ name: o.fieldName.slice(4), ordinal, rect: o.rect });
+        if (o.fieldName?.startsWith('img_') && o.rect) state.slots.push({ name: o.fieldName.slice(4), ordinal, rect: o.rect });
       }
-    }
+    });
   }
   for (const s of state.slots) {
     if (s.pageId) continue;               // a box on an added page keeps the exercise it was made for
@@ -175,11 +175,18 @@ export async function reopen(bytes) {
   a.pdfViewer.currentPageNumber = Math.min(page, a.pagesCount);
 }
 
+// Resolves once no transform is running, checking every 50 ms.
+const whenIdle = () => new Promise(resolve => {
+  const check = () => { if (state.busy) setTimeout(check, 50); else resolve(); };
+  check();
+});
+
 // Save the live viewer state, let `fn` change it with pdf-lib, reopen.
 export async function transform(fn, targetPage) {
   const a = app();
   a.pdfViewer._layerProperties?.annotationEditorUIManager?.endCurrentEditing?.();
-  while (state.busy) await new Promise(r => setTimeout(r, 50));
+  // Only wait when busy: an idle editor claims `busy` at once, before any other caller can.
+  if (state.busy) await whenIdle();
   state.busy = true;
   document.body.classList.add('lb-busy');
   try {
