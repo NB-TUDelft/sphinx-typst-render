@@ -3,8 +3,9 @@ summary: >-
   What sphinx-typst-render is (a Sphinx and Jupyter Book extension that turns
   Typst sources into PDFs, previews, fillable forms, download-menu entries, an
   overview page and an in-browser editor) and whom it serves (NB-TUDelft course
-  books); `AGPL-3.0-or-later` since 1.0.0, MIT up to 0.2.5; bundled
-  third-party code keeps its own licence and notice.
+  books); the editor is maintained here alone, never ported from or kept close
+  to the discontinued EI_Logbooks site; `AGPL-3.0-or-later` since 1.0.0, MIT
+  up to 0.2.5; bundled third-party code keeps its own licence and notice.
 always_read: true
 ---
 
@@ -20,10 +21,13 @@ reopen the export later to keep working. `README.md` documents all of this for
 users; this knowledge base does not repeat it.
 
 It is maintained under NB-TUDelft for TU Delft course books and published on
-PyPI; conda is off (Conda packages, under Future work). The editor's modules
-are the logbook site's editor from `NB-TUDelft/EI_Logbooks`, split up and made
-configurable; `README.md`, "Developing the editor", names the commit they
-follow and how to take in later changes.
+PyPI; conda is off (Conda packages, under Future work).
+
+**The editor is this project's own, maintained here alone.** It began as the
+editor of the `NB-TUDelft/EI_Logbooks` site, which is discontinued, redirects
+to the book, and will not be maintained (maintainer, `2026-11-22`). Never port
+from it, compare with it, or keep the editor's code close to it; change the
+editor on its own merits.
 
 ## Licence
 

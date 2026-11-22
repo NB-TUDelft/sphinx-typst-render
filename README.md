@@ -352,16 +352,9 @@ from pdf.js's own components (`PDFViewer`, `EventBus`, `PDFLinkService`,
 the other modules in `src/` add the editing. The release workflow runs the
 build before packaging, so every wheel and sdist carries it (see RELEASING.md).
 
-The editing modules are the logbook site's editor
-([NB-TUDelft/EI_Logbooks](https://github.com/NB-TUDelft/EI_Logbooks),
-`site/editor/logbook.js`) split up and made configurable, in step with its
-commit `0e96a5e` (2026-11-21). To take in later changes, diff `site/editor/`
-from that commit and port them module by module. Not ported: labelling images
-dragged onto a page, because this editor offers no stamp tool for students to
-create them with. One fix is this package's own: an empty picture box's form
-field is hidden (`editor.css`), because pdf.js stacks a page's fields with a
-rising z-index, and on a busy page the field would cover the box's "Insert
-image" button.
+An empty picture box's form field is hidden (`editor.css`), because pdf.js
+stacks a page's fields with a rising z-index, and on a busy page the field
+would cover the box's "Insert image" button.
 
 `tools/editor_test.py` drives the built editor in headless Chromium
 (Playwright): it builds a small Sphinx site, fills a worksheet in, exports

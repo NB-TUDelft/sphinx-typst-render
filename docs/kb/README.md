@@ -35,7 +35,7 @@ this document" under Rules holds those rules.
 
 **Mission**: why the project exists, and the licence everything else follows.
 
-- [Mission](010-mission/010-mission.md) (*always read*) — What sphinx-typst-render is (a Sphinx and Jupyter Book extension that turns Typst sources into PDFs, previews, fillable forms, download-menu entries, an overview page and an in-browser editor) and whom it serves (NB-TUDelft course books); `AGPL-3.0-or-later` since 1.0.0, MIT up to 0.2.5; bundled third-party code keeps its own licence and notice.
+- [Mission](010-mission/010-mission.md) (*always read*) — What sphinx-typst-render is (a Sphinx and Jupyter Book extension that turns Typst sources into PDFs, previews, fillable forms, download-menu entries, an overview page and an in-browser editor) and whom it serves (NB-TUDelft course books); the editor is maintained here alone, never ported from or kept close to the discontinued EI_Logbooks site; `AGPL-3.0-or-later` since 1.0.0, MIT up to 0.2.5; bundled third-party code keeps its own licence and notice.
 
 **Rules**: how to work in this repository, verify, commit, and keep this knowledge base.
 
@@ -51,7 +51,7 @@ this document" under Rules holds those rules.
 
 **Ongoing work**: what is in progress, in the order to take it up.
 
-- [Work order](040-ongoing-work/010-work-order.md) (*always read*) — The work order (`2026-11-22`): bring in `origin/main`'s 1.1.2 and advance `sonar.projectVersion`; get the SonarQube gate to `OK` (fails on 19 reliability and 127 maintainability issues, mostly in the ported editor); fix the console script with no `main`; correct README's stale "Not ported" note on dropped images; decide on the unmerged `claude/editor-test-gradient`; add `editor/coverage.mjs` to Biome's files.
+- [Work order](040-ongoing-work/010-work-order.md) (*always read*) — The work order (`2026-11-22`): get the SonarQube gate to `OK` (in progress; it failed on 19 reliability and 127 maintainability issues in older code); fix the console script with no `main`; decide on the unmerged `claude/editor-test-gradient`; add `editor/coverage.mjs` to Biome's files.
 
 **Future work**: recorded directions nobody has started.
 
