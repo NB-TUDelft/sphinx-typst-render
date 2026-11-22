@@ -31,7 +31,7 @@ export const documentOptions = {
 const PRINT_UNITS = 150 / 72;
 
 class Viewer {
-  #nativePrint = window.print.bind(window);
+  #nativePrint = globalThis.print.bind(globalThis);
   #printing = false;
   // The open document's loading task. Destroying it frees the document, as
   // the stock app's close() does (pdfLoadingTask.destroy()).
@@ -65,11 +65,11 @@ class Viewer {
     this.eventBus.on('switchannotationeditorparams', ({ type, value }) => {
       this.pdfViewer.annotationEditorParams = { type, value };
     });
-    window.addEventListener('keydown', e => this.#onKeyDown(e));
+    globalThis.addEventListener('keydown', e => this.#onKeyDown(e));
     container.addEventListener('wheel', e => this.#onWheel(e), { passive: false });
     // A print started from a script goes through the rendering below, as in
     // the stock viewer, which also replaces window.print.
-    window.print = () => { void this.print(); };
+    globalThis.print = () => { void this.print(); };
   }
 
   get pagesCount() {
@@ -198,7 +198,7 @@ class Viewer {
       throw error;
     }
     document.body.dataset.printing = '';
-    window.addEventListener('afterprint', cleanup, { once: true });
+    globalThis.addEventListener('afterprint', cleanup, { once: true });
     this.#nativePrint();
   }
 

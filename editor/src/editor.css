@@ -9,6 +9,7 @@
 	src: url("fonts/inter-latin-wght.woff2") format("woff2"); /* SIL OFL, see fonts/Inter-OFL.txt */
 }
 :root {
+	--lb-side-w: 176px; /* the page sidebar */
 	--lb-font:
 		"Inter", "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial,
 		sans-serif;
@@ -125,7 +126,8 @@ body.lb-custom .pdfViewer .page {
 	align-items: center;
 	gap: 10px;
 	padding: 9px 14px;
-	flex-wrap: nowrap;
+	/* never clip: if the bar still does not fit, it wraps (the page offset follows its height) */
+	flex-wrap: wrap;
 	min-height: 56px;
 }
 @media (max-width: 720px) {
@@ -256,6 +258,7 @@ body.lb-custom .pdfViewer .page {
 	color: var(--lb-muted);
 	padding: 0 6px 0 4px;
 	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
 }
 
 .lb-tools-wrap {
@@ -444,10 +447,6 @@ body.lb-busy #lbSaveBadge::after {
 		display: none;
 	}
 }
-/* never clip: if the bar still does not fit, it wraps (the page offset follows its height) */
-.lb-row {
-	flex-wrap: wrap;
-}
 /* Set by the bar itself when it would otherwise wrap (see buildBar). */
 #lbBar.lb-c1 .lb-tool .lb-tb-label {
 	display: none;
@@ -473,9 +472,6 @@ body.lb-busy #lbSaveBadge::after {
 .lb-group,
 .lb-right {
 	flex-shrink: 0;
-}
-.lb-page-count {
-	white-space: nowrap;
 }
 @media (max-width: 720px) {
 	.lb-hide-sm {
@@ -896,9 +892,6 @@ body.lb-custom .annotationLayer .popupAnnotation {
 }
 
 /* ------------------------------------------------------------ page sidebar */
-:root {
-	--lb-side-w: 176px;
-}
 #lbSide {
 	position: fixed;
 	top: var(--lb-bar-h, 56px);

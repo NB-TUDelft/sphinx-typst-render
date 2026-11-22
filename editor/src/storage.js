@@ -15,7 +15,7 @@ export const idb = (() => {
     return new Promise((res, rej) => {
       const t = db.transaction('autosave', mode);
       const req = fn(t.objectStore('autosave'));
-      t.oncomplete = () => res(req && req.result);
+      t.oncomplete = () => res(req?.result);
       t.onerror = () => rej(t.error);
       t.onabort = () => rej(t.error || new Error('storage transaction aborted')); // e.g. quota
     });
@@ -56,12 +56,12 @@ export const idb = (() => {
 export function saveKeyOf(id) {
   let k = String(id || '');
   k = config.aliases[k] || k;
-  const m = config.keyPattern && k.match(config.keyPattern);
+  const m = config.keyPattern?.exec(k);
   if (m) k = m[1] ?? m[0];
   return config.aliases[k] || k;
 }
 export const PREV = 'prev:';   // prev:<number>:<time> holds an older save of that logbook
-export const hasBytes = r => !!(r && r.bytes && r.bytes.length);
+export const hasBytes = r => !!r?.bytes?.length;
 
 // Move every save to its logbook number. Nothing is deleted until the copy is
 // read back. When two saves meet, the newest becomes the save and the other is

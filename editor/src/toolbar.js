@@ -12,7 +12,7 @@ import { buildSidebar, setSidebar, side } from './sidebar.js';
 import { config } from './config.js';
 
 const capital = s => s.charAt(0).toUpperCase() + s.slice(1);
-const escapeRegExp = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeRegExp = s => s.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 
 function svgIcon(path) {
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -148,7 +148,10 @@ export function buildBar() {
     return kids.some(k => k.offsetTop > kids[0].offsetTop + 8); };
   const compact = () => {
     bar.classList.remove(...steps);
-    for (const s of steps) { if (!wraps()) break; bar.classList.add(s); }
+    for (const s of steps) {
+      if (!wraps()) break;
+      bar.classList.add(s);
+    }
   };
   let compactFrame = 0;
   const recompact = () => { cancelAnimationFrame(compactFrame); compactFrame = requestAnimationFrame(compact); };
@@ -163,7 +166,10 @@ export function buildBar() {
   syncMode(MODE.NONE);
 }
 const openMenu = () => { ui.menu.hidden = false; ui.menu.querySelector('button')?.focus(); };
-const closeMenu = () => { if (ui.menu) ui.menu.hidden = true; if (ui.pmenu) ui.pmenu.hidden = true; };
+const closeMenu = () => {
+  if (ui.menu) ui.menu.hidden = true;
+  if (ui.pmenu) ui.pmenu.hidden = true;
+};
 
 // Privacy: delete the work this browser keeps, after two confirmations.
 async function clearSaved(all) {
@@ -192,7 +198,7 @@ async function clearSaved(all) {
 function setMode(mode) {
   const a = app();
   if (!a?.pdfDocument) return;
-  a.eventBus.dispatch('switchannotationeditormode', { source: window, mode });
+  a.eventBus.dispatch('switchannotationeditormode', { source: globalThis, mode });
 }
 export function syncMode(mode) {
   ui.mode = mode;
@@ -213,8 +219,8 @@ function buildStyle(mode) {
   const c = chosen[mode];
   const apply = () => {
     const bus = app().eventBus;
-    bus.dispatch('switchannotationeditorparams', { source: window, type: st.colorParam, value: c.color });
-    if (st.sizeParam) bus.dispatch('switchannotationeditorparams', { source: window, type: st.sizeParam, value: c.size });
+    bus.dispatch('switchannotationeditorparams', { source: globalThis, type: st.colorParam, value: c.color });
+    if (st.sizeParam) bus.dispatch('switchannotationeditorparams', { source: globalThis, type: st.sizeParam, value: c.size });
     buildStyle(mode);
   };
   for (const col of st.colors) {
@@ -255,5 +261,5 @@ export function updateDeleteButton() {
   syncPage();
   if (!ui.del) return;
   const info = state.pageInfo[app().pdfViewer.currentPageNumber - 1];
-  ui.del.hidden = !(info && info.added); // only pages the student added can go
+  ui.del.hidden = !info?.added; // only pages the student added can go
 }

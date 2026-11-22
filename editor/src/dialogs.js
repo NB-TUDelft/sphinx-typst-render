@@ -19,7 +19,7 @@ export function modal(title, body, actions, label) {
       if (e.key === 'Tab') { // keep focus inside the dialog
         const f = [...dlg.querySelectorAll('button, select, input, textarea')];
         const i = f.indexOf(document.activeElement);
-        if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+        if (e.shiftKey && i <= 0) { e.preventDefault(); f.at(-1).focus(); }
         else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
       }
     });

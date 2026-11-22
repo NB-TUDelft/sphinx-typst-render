@@ -35,7 +35,7 @@ import { onZoom, attachHints, keepFocusThroughZoom, MAX_ZOOM } from './hints.js'
 setInterval(autosaveNow, AUTOSAVE_MS);
 
 // Tell other tabs which document is open here; the later tab turns its autosave off.
-const channel = 'BroadcastChannel' in window ? new BroadcastChannel(config.storage) : null;
+const channel = 'BroadcastChannel' in globalThis ? new BroadcastChannel(config.storage) : null;
 if (channel) channel.onmessage = ({ data }) => {
   if (!data || data.id !== state.saveKey || !state.saveKey) return;
   if (data.type === 'hello' && !state.otherTab) channel.postMessage({ type: 'taken', id: state.saveKey });
@@ -85,7 +85,7 @@ async function onDocumentLoaded() {
 
 // Ctrl+S downloads nothing: the work saves itself in this browser, Export PDF
 // makes the hand-in file, and the menu downloads a copy to keep filling in elsewhere.
-window.addEventListener('keydown', e => {
+globalThis.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 's' || e.key === 'S')) {
     e.preventDefault();
     e.stopImmediatePropagation();
@@ -112,10 +112,10 @@ bus.on('pagechanging', () => { updateDeleteButton(); markCurrent(); });
 bus.on('documenterror', ({ error }) => toast('Could not open that file: ' + error.message, 8000));
 
 // Read-only state and a file hook for automated tests.
-window.typstRenderEditor = {
-  state: () => JSON.parse(JSON.stringify({
+globalThis.typstRenderEditor = {
+  state: () => structuredClone({
     id: state.id, slots: state.slots, exercises: state.exercises, pageInfo: state.pageInfo, images: state.images,
-  })),
+  }),
   // Takes the id of a file input, so test drivers in sandboxes need not pass a function.
   setTestFile: id => setTestFileHook(all => { const f = document.getElementById(id)?.files || [];
     return all ? [...f] : f[0] || null; }),
@@ -129,7 +129,9 @@ window.typstRenderEditor = {
 };
 
 buildBar();
-app().start().catch(err => {
+try {
+  await app().start();
+} catch (err) {
   console.error('[typst-editor]', err);
   toast(`Could not open the ${config.noun}: ${err.message}`, 10000);
-});
+}

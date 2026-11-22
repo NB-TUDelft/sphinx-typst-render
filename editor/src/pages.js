@@ -77,21 +77,21 @@ export async function insertImagePage() {
 export async function deleteCurrentPage() {
   const n = app().pdfViewer.currentPageNumber;
   const info = state.pageInfo[n - 1];
-  if (!info || !info.added) return;
+  if (!info?.added) return;
   if (!await askConfirm(`Delete page ${n}?`, 'This page and everything on it will be removed.', 'Delete page')) return;
   await transform(async pl => {
     // drop metadata of an image page's notes field on this page
     const page = pl.getPage(n - 1);
     const widgetIds = new Set();
     for (const f of pl.getForm().getFields()) {
-      if (f.acroField.getWidgets().some(w => String(w.P && w.P()) === String(page.ref))) {
+      if (f.acroField.getWidgets().some(w => String(w.P?.()) === String(page.ref))) {
         widgetIds.add(f.getName());
         pl.getForm().removeField(f);
       }
     }
     for (const id of widgetIds) delete state.images['page:' + id];
     if (info.id) {                        // image boxes on this page, and their images
-      for (const s of state.slots.filter(s => s.pageId === info.id)) delete state.images['slot:' + s.name];
+      for (const s of state.slots.filter(slot => slot.pageId === info.id)) delete state.images['slot:' + s.name];
       state.slots = state.slots.filter(s => s.pageId !== info.id);
     }
     pl.removePage(n - 1);

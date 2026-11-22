@@ -8,7 +8,7 @@ import { placeInSlot, slotPageIndex } from './document.js';
 // Slot buttons sit on top of the page, inside the reserved box.
 export function decoratePage(pageNumber) {
   const pv = app().pdfViewer.getPageView(pageNumber - 1);
-  if (!pv || !pv.div) return;
+  if (!pv?.div) return;
   pv.div.querySelectorAll('.lb-slot').forEach(e => { e.remove(); });
   for (const slot of state.slots) {
     if (slotPageIndex(slot) !== pageNumber - 1) continue;

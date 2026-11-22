@@ -9,7 +9,7 @@ import { documentBytes, reopen } from './document.js';
 import { config } from './config.js';
 
 export async function autosaveNow(fromTransform = false) {
-  const a = app(), doc = a && a.pdfDocument;
+  const a = app(), doc = a?.pdfDocument;
   if (!doc || !state.saveKey || doc !== state.doc) return; // id not (yet) for this document
   if ((state.busy && !fromTransform) || state.restorePending || state.otherTab || state.wiped) return;
   if (state.opCount === 0 && doc.annotationStorage.size === 0) return; // nothing changed yet
@@ -38,7 +38,10 @@ export async function offerRestore() {
   await migrateSaves();
   const rec = await idb.get(id);
   if (state.doc !== doc) return;
-  if (!hasBytes(rec)) { if (id) await welcome(doc); return; }
+  if (!hasBytes(rec)) {
+    if (id) await welcome(doc);
+    return;
+  }
   const older = (await olderSaves(id))[0];   // the newest older save, if any
   const fmt = t => new Date(t).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const label = fmt(rec.time);

@@ -3,7 +3,7 @@
 // this bundle (window.typstEditorConfig, from `typst_render_editor` in the
 // Sphinx config); anything missing falls back to a neutral default.
 
-const given = window.typstEditorConfig || {};
+const given = globalThis.typstEditorConfig || {};
 const params = new URLSearchParams(location.search);
 
 const noun = given.noun || 'worksheet';
@@ -17,7 +17,7 @@ function sameSite(url) {
     const u = new URL(url, location.href);
     return u.origin === location.origin && /^https?:$/.test(u.protocol) ? u.href : null;
   } catch (_) {
-    return null;
+    return null; // not a URL at all
   }
 }
 
@@ -29,7 +29,7 @@ export const config = {
   // group, or the whole match. Without it the stem itself is the key.
   keyPattern: given.keyPattern ? new RegExp(given.keyPattern) : null,
   // Old key or stem -> new key, for renumbered or merged documents.
-  aliases: (given.aliases && given.aliases.keys) || {},
+  aliases: given.aliases?.keys || {},
   // Exported PDFs wrap every answer in invisible [[<labelPrefix>:...]] labels,
   // so code can read them back. The same prefix names image stamps
   // (<tag>-slot:) and the PDF keywords, which keeps exports from one site

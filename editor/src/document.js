@@ -32,12 +32,14 @@ async function readOutline(doc) {
         if (typeof dest === 'string') dest = await doc.getDestination(dest);
         if (Array.isArray(dest) && dest[0]) {
           page = typeof dest[0] === 'number' ? dest[0] : await doc.getPageIndex(dest[0]);
-          if (dest[1] && dest[1].name === 'XYZ' && typeof dest[3] === 'number') top = dest[3];
+          if (dest[1]?.name === 'XYZ' && typeof dest[3] === 'number') top = dest[3];
         }
-      } catch (_) {}
+      } catch (_) {
+        // a destination pdf.js cannot resolve: the entry is listed without a page
+      }
       const title = parent ? `${parent} › ${it.title}` : it.title;
       out.push({ title, label: it.title, depth, page, top });
-      if (it.items && it.items.length) await walk(it.items, title, depth + 1);
+      if (it.items?.length) await walk(it.items, title, depth + 1);
     }
   };
   await walk(items);
@@ -47,7 +49,7 @@ async function readOutline(doc) {
 // Exercise for a page: the last section that starts on or before it.
 export function exerciseForPage(pageIndex) {
   const pi = state.pageInfo[pageIndex];
-  if (pi && pi.added && pi.exercise) return pi.exercise;
+  if (pi?.added && pi.exercise) return pi.exercise;
   let found = null;
   for (const e of state.exercises) if (e.page >= 0 && e.page <= pageIndex) found = e.title;
   return found || GENERAL;
@@ -57,7 +59,7 @@ export function exerciseForPage(pageIndex) {
 // units) on a page, or earlier. Added pages carry their own.
 export function exerciseAt(page, top) {
   const pi = state.pageInfo[page];
-  if (pi && pi.added && pi.exercise) return pi.exercise;
+  if (pi?.added && pi.exercise) return pi.exercise;
   let found = null;
   for (const e of state.exercises) {
     if (e.page < 0) continue;
@@ -84,14 +86,14 @@ export async function analyse() {
   const info = pl.getInfoDict();
   const infoStr = k => {
     const v = info.lookup(PDFName.of(k));
-    return v && v.decodeText ? v.decodeText() : null;
+    return v?.decodeText ? v.decodeText() : null;
   };
   state.pageInfo = pl.getPages().map(p => {
     const added = p.node.lookup(PDFName.of(KEY.added)) === PDFBool.True;
     const kind = p.node.lookup(PDFName.of(KEY.kind));
     const ex = p.node.lookup(PDFName.of(KEY.exercise));
     const pid = p.node.lookup(PDFName.of(KEY.pageId));
-    const text = v => v && v.decodeText ? v.decodeText() : null;
+    const text = v => v?.decodeText ? v.decodeText() : null;
     return { added, kind: text(kind), exercise: text(ex), id: text(pid) };
   });
   state.id = infoStr(KEY.id) || (a.filename || 'document.pdf').replace(/\.pdf$/i, '').replace(/[_ ]edited$/i, '');
@@ -110,7 +112,7 @@ export async function analyse() {
     for (let p = 0; p < doc.numPages; p++) {
       const annots = await (await doc.getPage(p + 1)).getAnnotations({ intent: 'display' });
       for (const o of annots) {
-        if (!o.fieldName || !o.fieldName.startsWith('img_') || !o.rect) continue;
+        if (!o.fieldName?.startsWith('img_') || !o.rect) continue;
         let ordinal = -1;
         for (let i = 0; i <= p; i++) if (!state.pageInfo[i].added) ordinal++;
         state.slots.push({ name: o.fieldName.slice(4), ordinal, rect: o.rect });
@@ -199,6 +201,7 @@ export async function transform(fn, targetPage) {
   } catch (err) {
     console.error('[typst-editor]', err);
     toast('Something went wrong: ' + err.message);
+    return null;
   } finally {
     state.busy = false;
     document.body.classList.remove('lb-busy');
@@ -215,7 +218,7 @@ function removeAnnotsByNM(page, nm) {
     const ref = annots.get(i);
     const d = page.doc.context.lookup(ref);
     const n = d instanceof PDFDict ? d.lookup(PDFName.of('NM')) : null;
-    if (!(n && n.decodeText && n.decodeText() === nm)) keep.push(ref);
+    if (n?.decodeText?.() !== nm) keep.push(ref);
   }
   page.node.set(PDFName.of('Annots'), page.doc.context.obj(keep));
 }
@@ -227,7 +230,7 @@ export async function placeInSlot(slot, rec) {
   await transform(async pl => {
     const page = pl.getPage(pageIndex);
     removeAnnotsByNM(page, slotNM(slot.name));
-    try { const f = pl.getForm().getField('img_' + slot.name); pl.getForm().removeField(f); } catch (_) {}
+    try { const f = pl.getForm().getField('img_' + slot.name); pl.getForm().removeField(f); } catch (_) { /* no such field: nothing to remove */ }
     if (!rec) { delete state.images['slot:' + slot.name]; return; }
     await stampImage(pl, page, slot, rec, pageIndex);
   }, pageIndex + 1);

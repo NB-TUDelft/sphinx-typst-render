@@ -47,11 +47,11 @@ export async function flattenedBytes(decide = askOverflow) {
   };
   const acro = pl.catalog.lookup(N('AcroForm'));
   const daDefault = acro instanceof PDFDict && acro.lookup(N('DA'));
-  const textOf = v => (v && v.decodeText) ? v.decodeText() : '';
+  const textOf = v => v?.decodeText ? v.decodeText() : '';
   const fieldName = d => {
     const parts = [];
     for (let n = d, i = 0; n instanceof PDFDict && i < 20; n = n.lookup(N('Parent')), i++) {
-      const t = n.lookup(N('T')); if (t && t.decodeText) parts.unshift(t.decodeText());
+      const t = n.lookup(N('T')); if (t?.decodeText) parts.unshift(t.decodeText());
     }
     return parts.join('.');
   };
@@ -154,19 +154,19 @@ export async function flattenedBytes(decide = askOverflow) {
       if (!(apRef instanceof PDFRef)) apRef = ctx.register(n);
       const bbox = nums(n.dict.lookup(N('BBox'))), rect = nums(d.lookup(N('Rect')));
       if (!bbox || !rect) continue;
-      const m = nums(n.dict.lookup(N('Matrix'))) || [1, 0, 0, 1, 0, 0];
+      const matrix = nums(n.dict.lookup(N('Matrix'))) || [1, 0, 0, 1, 0, 0];
       // Map the appearance box (after its own Matrix) onto the annotation rectangle.
       const pts = [[bbox[0], bbox[1]], [bbox[2], bbox[1]], [bbox[0], bbox[3]], [bbox[2], bbox[3]]]
-        .map(([x, y]) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]]);
+        .map(([x, y]) => [matrix[0] * x + matrix[2] * y + matrix[4], matrix[1] * x + matrix[3] * y + matrix[5]]);
       const bx1 = Math.min(...pts.map(p => p[0])), bx2 = Math.max(...pts.map(p => p[0]));
       const by1 = Math.min(...pts.map(p => p[1])), by2 = Math.max(...pts.map(p => p[1]));
       const rx1 = Math.min(rect[0], rect[2]), rx2 = Math.max(rect[0], rect[2]);
       const ry1 = Math.min(rect[1], rect[3]), ry2 = Math.max(rect[1], rect[3]);
       if (bx2 - bx1 < 1e-6 || by2 - by1 < 1e-6) continue;
       const sx = (rx2 - rx1) / (bx2 - bx1), sy = (ry2 - ry1) / (by2 - by1);
-      const name = page.node.newXObject('Flat', apRef);
+      const xobject = page.node.newXObject('Flat', apRef);
       ops.push(pushGraphicsState(), concatTransformationMatrix(sx, 0, 0, sy, rx1 - sx * bx1, ry1 - sy * by1),
-        drawObject(name), popGraphicsState());
+        drawObject(xobject), popGraphicsState());
     }
     if (keep.length) page.node.set(N('Annots'), ctx.obj(keep)); else page.node.delete(N('Annots'));
     if (ops.length) page.pushOperators(...ops);

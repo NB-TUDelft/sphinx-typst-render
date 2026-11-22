@@ -106,7 +106,9 @@ export function drawFieldText(page, font, charset, rect, value, da, ff, q, opts 
   if (fill) color = rgb(...fill); else if (grey) color = rgb(grey[0], grey[0], grey[0]);
   const xFor = (line, size) => {
     const tw = font.widthOfTextAtSize(line, size);
-    return q === 1 ? x1 + (w - tw) / 2 : q === 2 ? x2 - PAD - tw : x1 + PAD;
+    if (q === 1) return x1 + (w - tw) / 2;   // centred
+    if (q === 2) return x2 - PAD - tw;       // right-aligned
+    return x1 + PAD;
   };
   const start = startSize(ff, daSize(da), h);
   const red = rgb(0.75, 0, 0);

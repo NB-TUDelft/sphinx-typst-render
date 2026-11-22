@@ -18,11 +18,11 @@
     heading.className = "dropdown-header";
     heading.textContent = text;
     item.appendChild(heading);
-    menu.insertBefore(item, before);
+    before.before(item);
   }
 
   function decorate() {
-    var labels = window.typstRenderLabels || {};
+    var labels = globalThis.typstRenderLabels || {};
     var menus = document.querySelectorAll(".dropdown-download-buttons ul.dropdown-menu");
 
     Array.prototype.forEach.call(menus, function (menu) {
@@ -33,11 +33,11 @@
       // Nothing of ours on this page means nothing to separate.
       if (!ours.length) return;
 
-      var theirs = items.filter(function (li) { return !li.querySelector(OURS); });
+      var firstOfTheirs = items.find(function (li) { return !li.querySelector(OURS); });
       menu.setAttribute(MARK, "");
       // Insert the lower header first so the reference node stays valid.
       addHeader(menu, ours[0], labels.downloads);
-      addHeader(menu, theirs[0], labels.source);
+      addHeader(menu, firstOfTheirs, labels.source);
     });
   }
 

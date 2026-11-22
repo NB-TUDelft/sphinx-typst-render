@@ -11,7 +11,7 @@ import { config } from './config.js';
 const SIDE_KEY = `${config.storage}-sidebar`, THUMB_W = 128;
 export const side = { el: null, list: null, observer: null, open: false, doc: null, gen: 0 };
 const sideWanted = () => {
-  try { const v = localStorage.getItem(SIDE_KEY); if (v) return v === 'open'; } catch (_) {}
+  try { const v = localStorage.getItem(SIDE_KEY); if (v) return v === 'open'; } catch (_) { /* storage blocked: go by the width */ }
   return innerWidth >= 1100;
 };
 export function buildSidebar() {
@@ -28,7 +28,7 @@ export function setSidebar(open, remember = true) {
   ui.sideBtn?.classList.toggle('lb-on', open);
   if (remember) { try { localStorage.setItem(SIDE_KEY, open ? 'open' : 'closed'); } catch (_) {} }
   if (open) fillSidebar();
-  window.dispatchEvent(new Event('resize'));          // pdf.js fits the page to the new width
+  globalThis.dispatchEvent(new Event('resize'));          // pdf.js fits the page to the new width
 }
 export function fillSidebar() {
   const a = app(), doc = a?.pdfDocument;

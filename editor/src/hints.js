@@ -31,7 +31,7 @@ export const MAX_ZOOM = 4;
 let zoomFocus = null;
 export function keepFocusThroughZoom() {
   const el = document.activeElement;
-  if (el && el.closest && el.closest('.annotationLayer') && 'selectionStart' in el)
+  if (el?.closest?.('.annotationLayer') && 'selectionStart' in el)
     zoomFocus = { el, start: el.selectionStart, end: el.selectionEnd, scroll: el.scrollTop };
   if (!zoomFocus) return;
   const z = zoomFocus, running = !!z.until;
@@ -46,9 +46,9 @@ export function keepFocusThroughZoom() {
   document.addEventListener('pointerdown', elsewhere, true);
   document.addEventListener('keydown', elsewhere, true);
   const watch = () => {
-    if (zoomFocus !== z) return stop();
+    if (zoomFocus !== z) { stop(); return; }
     const active = document.activeElement;
-    if (performance.now() > z.until || !z.el.isConnected || (active !== document.body && active !== z.el)) return stop();
+    if (performance.now() > z.until || !z.el.isConnected || (active !== document.body && active !== z.el)) { stop(); return; }
     if (active === z.el) {                          // keep the latest selection
       z.start = z.el.selectionStart; z.end = z.el.selectionEnd; z.scroll = z.el.scrollTop;
     } else if (z.el.offsetParent && getComputedStyle(z.el).visibility !== 'hidden') {
@@ -67,7 +67,7 @@ const liveUpdates = new Set();
 let zoomFrame = 0;
 export const onZoom = () => {
   cancelAnimationFrame(zoomFrame);
-  zoomFrame = requestAnimationFrame(() => { for (const u of [...liveUpdates]) u(); });
+  zoomFrame = requestAnimationFrame(() => { for (const u of liveUpdates) u(); });
 };
 const fieldsByPage = {};                                        // pageNumber -> Promise<[{id, rect, multi, start}]>
 function pageFields(pageNumber) {
@@ -93,7 +93,7 @@ function measure(f, font, text) {
   if (fitsAt(font, text, true, w, h, size)) {
     const lines = text ? wrapLines(text, font, size, avail) : [''];
     const room = Math.floor((h - 2 * PAD) / (size * LEAD));
-    const last = font.widthOfTextAtSize(lines[lines.length - 1], size);
+    const last = font.widthOfTextAtSize(lines.at(-1), size);
     return { left: Math.floor((avail - last) / avgS) + (room - lines.length) * Math.floor(avail / avgS) };
   }
   const cut = splitPoint(font, text, w, h, size, 1);
@@ -101,7 +101,7 @@ function measure(f, font, text) {
 }
 export function attachHints(pageNumber) {
   const pv = app().pdfViewer.getPageView(pageNumber - 1);
-  if (!pv || !pv.div) return;
+  if (!pv?.div) return;
   Promise.all([pageFields(pageNumber), liveFont()]).then(([fields, font]) => {
     for (const f of fields) {
       const el = pv.div.querySelector(`.annotationLayer [data-element-id="${f.id}"]`);
@@ -130,7 +130,7 @@ export function attachHints(pageNumber) {
         }
         // yellow mark on the part that moves
         if (f.multi && m.cut !== undefined) {
-          if (!mirror) { mirror = $('div', { class: 'lb-mirror', 'aria-hidden': 'true' }); section.insertBefore(mirror, el); }
+          if (!mirror) { mirror = $('div', { class: 'lb-mirror', 'aria-hidden': 'true' }); el.before(mirror); }
           const cs = getComputedStyle(el);
           for (const p of ['font', 'letterSpacing', 'lineHeight', 'padding', 'textAlign', 'borderWidth', 'borderStyle', 'boxSizing'])
             mirror.style[p] = cs[p];
@@ -151,7 +151,7 @@ export function attachHints(pageNumber) {
         else if (focused && m.left <= HINT_FROM) msg = `${m.left} characters left`;
         if (focused) for (const other of document.querySelectorAll('.lb-hint')) if (other !== hint) other.remove();   // one at a time
         if (!msg) { if (hint) { hint.remove(); hint = null; } return; }
-        if (!hint || !hint.isConnected) { hint = $('div', { class: 'lb-hint', role: 'status' }); pv.div.append(hint); }
+        if (!hint?.isConnected) { hint = $('div', { class: 'lb-hint', role: 'status' }); pv.div.append(hint); }
         hint.className = 'lb-hint' + (m.moved || m.left <= 0 ? ' lb-warn' : '');
         hint.textContent = msg;
         Object.assign(hint.style, place());

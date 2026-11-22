@@ -40,7 +40,7 @@ export async function decodeImage(file) {
       await img.decode();
       if (!img.naturalWidth || !img.naturalHeight) throw err;
       return img;
-    } catch (_) { throw err; } finally { setTimeout(() => URL.revokeObjectURL(url), 0); }
+    } catch (_) { throw err; /* the decoder's error says more than the <img>'s */ } finally { setTimeout(() => URL.revokeObjectURL(url), 0); }
   }
 }
 
